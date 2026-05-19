@@ -2,8 +2,9 @@ package org.example.config;
 
 public class GameConfig {
     // Window settings
-    public static final int WINDOW_WIDTH = 800;
-    public static final int WINDOW_HEIGHT = 600;
+    // Use 16:9 aspect ratio by default (e.g. 1280x720)
+    public static final int WINDOW_WIDTH = 1280;
+    public static final int WINDOW_HEIGHT = 720;
     public static final String WINDOW_TITLE = "EdGame";
 
     // Ground
