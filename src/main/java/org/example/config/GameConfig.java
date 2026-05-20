@@ -18,5 +18,7 @@ public class GameConfig {
     public static final double PLAYER_SPEED = 3;
     public static final double PLAYER_GRAVITY = 0.3;
     public static final double PLAYER_JUMP_STRENGTH = -12;
-}
 
+    // Tile size (used for block-based terrain)
+    public static final int TILE_SIZE = 40;
+}

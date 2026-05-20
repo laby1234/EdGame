@@ -10,9 +10,10 @@ import org.example.screen.PauseScreen;
 import org.example.screen.SettingsScreen;
 import org.example.state.GameState;
 
+import com.almasb.fxgl.input.UserAction;
+import static com.almasb.fxgl.dsl.FXGL.getInput;
 import static com.almasb.fxgl.dsl.FXGL.getGameController;
 import static com.almasb.fxgl.dsl.FXGL.onKey;
-import static com.almasb.fxgl.dsl.FXGL.onKeyDown;
 
 public class EdGameApplication extends GameApplication {
 
@@ -42,42 +43,81 @@ public class EdGameApplication extends GameApplication {
             }
         });
 
-        onKey(KeyCode.A, () -> {
-            if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
-                gameScreen.getPlayerComponent().moveLeft();
+        getInput().addAction(new UserAction("MoveLeft") {
+            @Override
+            protected void onActionBegin() {
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                    gameScreen.getPlayerComponent().setMovingLeft(true);
             }
-        });
-        onKey(KeyCode.LEFT, () -> {
-            if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
-                gameScreen.getPlayerComponent().moveLeft();
+            @Override
+            protected void onActionEnd() {
+                if (gameScreen != null && gameScreen.getPlayerComponent() != null)
+                    gameScreen.getPlayerComponent().setMovingLeft(false);
             }
-        });
-        onKey(KeyCode.D, () -> {
-            if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
-                gameScreen.getPlayerComponent().moveRight();
-            }
-        });
-        onKey(KeyCode.RIGHT, () -> {
-            if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
-                gameScreen.getPlayerComponent().moveRight();
-            }
-        });
+        }, KeyCode.A);
 
-        onKeyDown(KeyCode.W, () -> {
-            if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
-                gameScreen.getPlayerComponent().requestJump();
+        getInput().addAction(new UserAction("MoveLeftArrow") {
+            @Override
+            protected void onActionBegin() {
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                    gameScreen.getPlayerComponent().setMovingLeft(true);
             }
-        });
-        onKeyDown(KeyCode.UP, () -> {
-            if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
-                gameScreen.getPlayerComponent().requestJump();
+            @Override
+            protected void onActionEnd() {
+                if (gameScreen != null && gameScreen.getPlayerComponent() != null)
+                    gameScreen.getPlayerComponent().setMovingLeft(false);
             }
-        });
-        onKeyDown(KeyCode.SPACE, () -> {
-            if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
-                gameScreen.getPlayerComponent().requestJump();
+        }, KeyCode.LEFT);
+
+        getInput().addAction(new UserAction("MoveRight") {
+            @Override
+            protected void onActionBegin() {
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                    gameScreen.getPlayerComponent().setMovingRight(true);
             }
-        });
+            @Override
+            protected void onActionEnd() {
+                if (gameScreen != null && gameScreen.getPlayerComponent() != null)
+                    gameScreen.getPlayerComponent().setMovingRight(false);
+            }
+        }, KeyCode.D);
+
+        getInput().addAction(new UserAction("MoveRightArrow") {
+            @Override
+            protected void onActionBegin() {
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                    gameScreen.getPlayerComponent().setMovingRight(true);
+            }
+            @Override
+            protected void onActionEnd() {
+                if (gameScreen != null && gameScreen.getPlayerComponent() != null)
+                    gameScreen.getPlayerComponent().setMovingRight(false);
+            }
+        }, KeyCode.RIGHT);
+
+        getInput().addAction(new UserAction("JumpW") {
+            @Override
+            protected void onActionBegin() {
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                    gameScreen.getPlayerComponent().requestJump();
+            }
+        }, KeyCode.W);
+
+        getInput().addAction(new UserAction("JumpUp") {
+            @Override
+            protected void onActionBegin() {
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                    gameScreen.getPlayerComponent().requestJump();
+            }
+        }, KeyCode.UP);
+
+        getInput().addAction(new UserAction("JumpSpace") {
+            @Override
+            protected void onActionBegin() {
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                    gameScreen.getPlayerComponent().requestJump();
+            }
+        }, KeyCode.SPACE);
     }
 
 

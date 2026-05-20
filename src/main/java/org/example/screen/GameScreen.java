@@ -10,7 +10,6 @@ import javafx.scene.paint.Color;
 import org.example.config.GameConfig;
 import org.example.entity.EntityFactory;
 import org.example.entity.player.PlayerComponent;
-import org.example.input.InputManager;
 import org.example.ui.AssetManager;
 import org.example.ui.UIStyle;
 
@@ -51,7 +50,6 @@ public class GameScreen extends Screen {
         player = EntityFactory.createPlayer();
         playerComponent = EntityFactory.getPlayerComponent(player);
 
-        new InputManager(playerComponent, true);
     }
 
     @Override
