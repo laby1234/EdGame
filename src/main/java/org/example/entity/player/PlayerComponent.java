@@ -100,8 +100,8 @@ public class PlayerComponent extends Component {
         if (entity.getX() < 0) {
             entity.setX(0);
         }
-        if (entity.getX() + GameConfig.PLAYER_SIZE > GameConfig.WINDOW_WIDTH) {
-            entity.setX(GameConfig.WINDOW_WIDTH - GameConfig.PLAYER_SIZE);
+        if (entity.getX() + GameConfig.PLAYER_SIZE > GameConfig.WORLD_WIDTH) {
+            entity.setX(GameConfig.WORLD_WIDTH - GameConfig.PLAYER_SIZE);
         }
     }
 

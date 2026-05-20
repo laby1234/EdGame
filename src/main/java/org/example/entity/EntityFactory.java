@@ -15,7 +15,7 @@ import static com.almasb.fxgl.dsl.FXGL.texture;
 public class EntityFactory {
 
     public static Entity createGround() {
-        int cols = (int) Math.ceil((double) GameConfig.WINDOW_WIDTH / GameConfig.TILE_SIZE);
+        int cols = (int) Math.ceil((double) GameConfig.WORLD_WIDTH / GameConfig.TILE_SIZE);
         int rows = (int) Math.ceil((double) GameConfig.GROUND_HEIGHT / GameConfig.TILE_SIZE);
 
         Pane groundView = new Pane();

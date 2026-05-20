@@ -7,8 +7,12 @@ public class GameConfig {
     public static final int WINDOW_HEIGHT = 720;
     public static final String WINDOW_TITLE = "EdGame";
 
+    // World (side-scrolling) size
+    public static final int WORLD_WIDTH = WINDOW_WIDTH * 3;
+    public static final int WORLD_HEIGHT = WINDOW_HEIGHT;
+
     // Ground
-    public static final int GROUND_Y = 500;
+    public static final int GROUND_Y = 600;
     public static final int GROUND_HEIGHT = 100;
 
     // Player
