@@ -1,6 +1,8 @@
 package org.example.entity;
 
 import com.almasb.fxgl.entity.Entity;
+import com.almasb.fxgl.physics.BoundingShape;
+import com.almasb.fxgl.physics.HitBox;
 import com.almasb.fxgl.texture.Texture;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
@@ -32,6 +34,7 @@ public class EntityFactory {
         }
 
         return entityBuilder()
+                .type(EntityType.GROUND)
                 .at(0, GameConfig.GROUND_Y)
                 .view(groundView)
                 .buildAndAttach();
@@ -45,9 +48,45 @@ public class EntityFactory {
         playerComponent.setTextureContainer(container);
 
         return entityBuilder()
+                .type(EntityType.PLAYER)
                 .at(GameConfig.PLAYER_START_X, GameConfig.PLAYER_START_Y)
                 .view(container)
                 .with(playerComponent)
+                .buildAndAttach();
+    }
+
+    public static Entity createPlatform(double x, double y, int widthInTiles) {
+        double w = widthInTiles * GameConfig.TILE_SIZE;
+        double h = GameConfig.TILE_SIZE;
+
+        Pane view = new Pane();
+        view.setPrefSize(w, h);
+
+        for (int i = 0; i < widthInTiles; i++) {
+            Texture tile = texture("blocks/grass.png", GameConfig.TILE_SIZE, GameConfig.TILE_SIZE);
+            tile.setTranslateX(i * GameConfig.TILE_SIZE);
+            view.getChildren().add(tile);
+        }
+
+        return entityBuilder()
+                .type(EntityType.PLATFORM)
+                .at(x, y)
+                .view(view)
+                .bbox(new HitBox(BoundingShape.box(w, h)))
+                .buildAndAttach();
+    }
+
+    public static Entity createObstacle(double x, double y) {
+        double size = GameConfig.TILE_SIZE;
+        Rectangle view = new Rectangle(size, size, Color.web("#CC2200"));
+        view.setStroke(Color.web("#FF4400"));
+        view.setStrokeWidth(2);
+
+        return entityBuilder()
+                .type(EntityType.OBSTACLE)
+                .at(x, y)
+                .view(view)
+                .bbox(new HitBox(BoundingShape.box(size, size)))
                 .buildAndAttach();
     }
 

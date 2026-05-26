@@ -1,10 +1,13 @@
 package org.example.entity.player;
 
+import com.almasb.fxgl.entity.Entity;
 import com.almasb.fxgl.entity.component.Component;
 import com.almasb.fxgl.texture.Texture;
 import javafx.scene.layout.StackPane;
 import org.example.config.GameConfig;
+import org.example.entity.EntityType;
 
+import static com.almasb.fxgl.dsl.FXGL.getGameWorld;
 import static com.almasb.fxgl.dsl.FXGL.getInput;
 import static com.almasb.fxgl.dsl.FXGL.texture;
 
@@ -13,15 +16,15 @@ public class PlayerComponent extends Component {
     private double vy = 0;
     private boolean onGround = false;
     private boolean jumpReq = false;
+    private boolean dead = false;
+    private Runnable onDeath;
 
-    // Animation properties
     private double animationTimer = 0;
     private double animationFrameDuration = 0.15; // Duration per frame in seconds
     private int currentRunFrame = 0;
     private int currentIdleFrame = 0;
     private String lastAnimationState = "idle";
-    
-    // Key state tracking
+
     private boolean movingLeft = false;
     private boolean movingRight = false;
 
@@ -30,7 +33,11 @@ public class PlayerComponent extends Component {
     public void setTextureContainer(StackPane container) {
         this.textureContainer = container;
     }
-    
+
+    public void setOnDeath(Runnable onDeath) {
+        this.onDeath = onDeath;
+    }
+
     public void setMovingLeft(boolean moving) {
         this.movingLeft = moving;
     }
@@ -43,8 +50,13 @@ public class PlayerComponent extends Component {
         jumpReq = true;
     }
 
+    public boolean isDead() {
+        return dead;
+    }
+
     @Override
     public void onUpdate(double tpf) {
+        if (dead) return;
         // Update position based on current key states
         if (movingLeft) {
             entity.translateX(-GameConfig.PLAYER_SPEED);
@@ -63,12 +75,26 @@ public class PlayerComponent extends Component {
             vy = 0;
         }
 
+        onGround = false;
+
         if (entity.getY() + GameConfig.PLAYER_SIZE >= GameConfig.GROUND_Y) {
             entity.setY(GameConfig.GROUND_Y - GameConfig.PLAYER_SIZE);
             vy = 0;
             onGround = true;
-        } else {
-            onGround = false;
+        }
+
+        checkPlatformCollisions();
+
+        // Fall out of world
+        if (entity.getY() > GameConfig.WORLD_HEIGHT + 200) {
+            die();
+            return;
+        }
+
+        // Obstacle touch
+        if (checkObstacleCollision()) {
+            die();
+            return;
         }
 
         if (jumpReq) {
@@ -78,7 +104,6 @@ public class PlayerComponent extends Component {
             jumpReq = false;
         }
 
-        // Face player toward mouse cursor
         try {
             if (textureContainer != null) {
                 double mouseX = getInput().getMouseXWorld();
@@ -92,8 +117,56 @@ public class PlayerComponent extends Component {
         } catch (Exception ignored) {
         }
 
-        // Handle animation
         updateAnimation(tpf);
+    }
+
+    private void checkPlatformCollisions() {
+        for (Entity platform : getGameWorld().getEntitiesByType(EntityType.PLATFORM)) {
+            double pLeft  = platform.getX();
+            double pRight = pLeft + platform.getWidth();
+            double pTop   = platform.getY();
+
+            double eLeft   = entity.getX();
+            double eRight  = eLeft + GameConfig.PLAYER_SIZE;
+            double eBottom = entity.getY() + GameConfig.PLAYER_SIZE;
+
+            boolean hOverlap = eRight > pLeft + 2 && eLeft < pRight - 2;
+
+            // Land on top only (moving downward, bottom just crossed platform top)
+            if (hOverlap && vy >= 0
+                    && eBottom >= pTop
+                    && eBottom <= pTop + Math.abs(vy) + GameConfig.PLAYER_SIZE * 0.5) {
+                entity.setY(pTop - GameConfig.PLAYER_SIZE);
+                vy = 0;
+                onGround = true;
+            }
+        }
+    }
+
+    private boolean checkObstacleCollision() {
+        for (Entity obstacle : getGameWorld().getEntitiesByType(EntityType.OBSTACLE)) {
+            double oLeft   = obstacle.getX();
+            double oRight  = oLeft + obstacle.getWidth();
+            double oTop    = obstacle.getY();
+            double oBottom = oTop + obstacle.getHeight();
+
+            // Slight inset to avoid 1-pixel edge triggers
+            double eLeft   = entity.getX() + 4;
+            double eRight  = entity.getX() + GameConfig.PLAYER_SIZE - 4;
+            double eTop    = entity.getY() + 4;
+            double eBottom = entity.getY() + GameConfig.PLAYER_SIZE - 4;
+
+            if (eRight > oLeft && eLeft < oRight && eBottom > oTop && eTop < oBottom) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void die() {
+        if (dead) return;
+        dead = true;
+        if (onDeath != null) onDeath.run();
     }
 
     private void clampX() {
@@ -106,9 +179,7 @@ public class PlayerComponent extends Component {
     }
 
     private void updateAnimation(double tpf) {
-        // Priority: jump (in air) > run > idle
         String currentState;
-
         if (!onGround) {
             currentState = "jump";
         } else if (movingLeft || movingRight) {
@@ -117,13 +188,11 @@ public class PlayerComponent extends Component {
             currentState = "idle";
         }
 
-        // Reset animation if state changed
         if (!currentState.equals(lastAnimationState)) {
             animationTimer = 0;
             currentRunFrame = 0;
             currentIdleFrame = 0;
             lastAnimationState = currentState;
-
             if (currentState.equals("jump")) {
                 updatePlayerTexture("sprites/jump.png");
                 return;
@@ -133,14 +202,12 @@ public class PlayerComponent extends Component {
         animationTimer += tpf;
 
         if (currentState.equals("run")) {
-            // Run animation: 3 frames
             if (animationTimer >= animationFrameDuration) {
                 animationTimer -= animationFrameDuration;
                 currentRunFrame = (currentRunFrame + 1) % 4;
                 updatePlayerTexture("sprites/player_run" + (currentRunFrame + 1) + ".png");
             }
         } else if (currentState.equals("idle")) {
-            // Idle animation: 2 frames (blink)
             if (animationTimer >= animationFrameDuration) {
                 animationTimer -= animationFrameDuration;
                 currentIdleFrame = (currentIdleFrame + 1) % 2;
