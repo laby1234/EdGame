@@ -28,14 +28,9 @@ public class ProfessionalButton extends VBox {
         String normalUrl = null;
         String hoverUrl = null;
         String pressedUrl = null;
-        try {
-            if (AssetManager.class.getResource("/" + AssetManager.BTN_NORMAL) != null)
-                normalUrl = AssetManager.class.getResource("/" + AssetManager.BTN_NORMAL).toExternalForm();
-            if (AssetManager.class.getResource("/" + AssetManager.BTN_HOVER) != null)
-                hoverUrl = AssetManager.class.getResource("/" + AssetManager.BTN_HOVER).toExternalForm();
-            if (AssetManager.class.getResource("/" + AssetManager.BTN_PRESSED) != null)
-                pressedUrl = AssetManager.class.getResource("/" + AssetManager.BTN_PRESSED).toExternalForm();
-        } catch (Exception ignored) {}
+        normalUrl = getResourceUrl(AssetManager.BTN_NORMAL);
+        hoverUrl = getResourceUrl(AssetManager.BTN_HOVER);
+        pressedUrl = getResourceUrl(AssetManager.BTN_PRESSED);
 
         button.setMinWidth(300);
         button.setMinHeight(60);
@@ -109,8 +104,8 @@ public class ProfessionalButton extends VBox {
                 iconView.setFitHeight(24);
                 button.setGraphic(iconView);
                 hasIcon = true;
-            } catch (Exception e) {
-                System.err.println("Could not load icon: " + iconPath);
+            } catch (RuntimeException e) {
+                System.err.println("Could not load icon: " + iconPath + " - " + e.getMessage());
                 hasIcon = false;
             }
         }
@@ -153,6 +148,16 @@ public class ProfessionalButton extends VBox {
     public void setMinSize(double width, double height) {
         button.setMinWidth(width);
         button.setMinHeight(height);
+    }
+
+    private String getResourceUrl(String resourcePath) {
+        try {
+            java.net.URL resource = AssetManager.class.getResource("/" + resourcePath);
+            return resource == null ? null : resource.toExternalForm();
+        } catch (RuntimeException e) {
+            System.err.println("Could not resolve button resource: " + resourcePath + " - " + e.getMessage());
+            return null;
+        }
     }
 }
 

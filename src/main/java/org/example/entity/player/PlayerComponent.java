@@ -57,18 +57,21 @@ public class PlayerComponent extends Component {
     @Override
     public void onUpdate(double tpf) {
         if (dead) return;
+        double dt = Math.min(tpf, 1.0 / 30.0);
+
         // Update position based on current key states
         if (movingLeft) {
-            entity.translateX(-GameConfig.PLAYER_SPEED);
+            entity.translateX(-GameConfig.PLAYER_SPEED * dt);
             clampX();
         }
         if (movingRight) {
-            entity.translateX(GameConfig.PLAYER_SPEED);
+            entity.translateX(GameConfig.PLAYER_SPEED * dt);
             clampX();
         }
         
-        vy += GameConfig.PLAYER_GRAVITY;
-        entity.translateY(vy);
+        vy += GameConfig.PLAYER_GRAVITY * dt;
+        double dy = vy * dt;
+        entity.translateY(dy);
 
         if (entity.getY() < 0) {
             entity.setY(0);
@@ -83,7 +86,7 @@ public class PlayerComponent extends Component {
             onGround = true;
         }
 
-        checkPlatformCollisions();
+        checkPlatformCollisions(dy);
 
         // Fall out of world
         if (entity.getY() > GameConfig.WORLD_HEIGHT + 200) {
@@ -114,13 +117,14 @@ public class PlayerComponent extends Component {
                     textureContainer.setScaleX(1);
                 }
             }
-        } catch (Exception ignored) {
+        } catch (RuntimeException e) {
+            System.err.println("Could not update player facing direction: " + e.getMessage());
         }
 
         updateAnimation(tpf);
     }
 
-    private void checkPlatformCollisions() {
+    private void checkPlatformCollisions(double dy) {
         for (Entity platform : getGameWorld().getEntitiesByType(EntityType.PLATFORM)) {
             double pLeft  = platform.getX();
             double pRight = pLeft + platform.getWidth();
@@ -135,7 +139,7 @@ public class PlayerComponent extends Component {
             // Land on top only (moving downward, bottom just crossed platform top)
             if (hOverlap && vy >= 0
                     && eBottom >= pTop
-                    && eBottom <= pTop + Math.abs(vy) + GameConfig.PLAYER_SIZE * 0.5) {
+                    && eBottom <= pTop + Math.abs(dy) + GameConfig.PLAYER_SIZE * 0.5) {
                 entity.setY(pTop - GameConfig.PLAYER_SIZE);
                 vy = 0;
                 onGround = true;
@@ -224,8 +228,8 @@ public class PlayerComponent extends Component {
             textureContainer.getChildren().clear();
             Texture newTexture = texture(textureName, GameConfig.PLAYER_SIZE, GameConfig.PLAYER_SIZE);
             textureContainer.getChildren().add(newTexture);
-        } catch (Exception e) {
-            // If texture loading fails, keep current texture
+        } catch (RuntimeException e) {
+            System.err.println("Could not update player texture: " + textureName + " - " + e.getMessage());
         }
     }
 }

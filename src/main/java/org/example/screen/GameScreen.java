@@ -26,6 +26,8 @@ import static com.almasb.fxgl.dsl.FXGL.getGameScene;
 
 public class GameScreen extends Screen {
 
+    private static final String DEATH_LABEL_TEXT = "YOU DIED";
+    private static final String DEATH_HINT_TEXT = "Press R to restart";
     private static final DropShadow TITLE_SHADOW = createShadow();
 
     private Entity player;
@@ -130,12 +132,12 @@ public class GameScreen extends Screen {
         redShadow.setColor(Color.web("#990000"));
         redShadow.setRadius(14);
 
-        Label deathLabel = new Label("YOU DIED");
+        Label deathLabel = new Label(DEATH_LABEL_TEXT);
         deathLabel.setFont(AssetManager.getTitleFont());
         deathLabel.setTextFill(Color.web("#CC0000"));
         deathLabel.setEffect(redShadow);
 
-        Label hintLabel = new Label("Press R to restart");
+        Label hintLabel = new Label(DEATH_HINT_TEXT);
         hintLabel.setFont(AssetManager.getTextFont());
         hintLabel.setTextFill(UIStyle.TEXT_COLOR);
 
@@ -190,13 +192,17 @@ public class GameScreen extends Screen {
 
     @Override
     public void cleanup() {
-        try { if (hudRoot != null)      getGameScene().removeUINode(hudRoot);      } catch (Exception ignored) {}
-        try { if (deathOverlay != null) getGameScene().removeUINode(deathOverlay); } catch (Exception ignored) {}
-        try { if (player != null)     player.removeFromWorld();     } catch (Exception ignored) {}
-        try { if (ground != null)     ground.removeFromWorld();     } catch (Exception ignored) {}
-        try { if (background != null) background.removeFromWorld(); } catch (Exception ignored) {}
-        for (Entity e : platforms) { try { e.removeFromWorld(); } catch (Exception ignored) {} }
-        for (Entity e : obstacles) { try { e.removeFromWorld(); } catch (Exception ignored) {} }
+        removeUINode(hudRoot, "HUD root");
+        removeUINode(deathOverlay, "death overlay");
+        removeEntity(player, "player");
+        removeEntity(ground, "ground");
+        removeEntity(background, "background");
+        for (Entity e : platforms) {
+            removeEntity(e, "platform");
+        }
+        for (Entity e : obstacles) {
+            removeEntity(e, "obstacle");
+        }
         platforms.clear();
         obstacles.clear();
         player = null;
@@ -216,5 +222,27 @@ public class GameScreen extends Screen {
         shadow.setRadius(4);
         shadow.setColor(Color.web("#1C0F08"));
         return shadow;
+    }
+
+    private void removeUINode(javafx.scene.Node node, String label) {
+        if (node == null) {
+            return;
+        }
+        try {
+            getGameScene().removeUINode(node);
+        } catch (RuntimeException e) {
+            System.err.println("Could not remove " + label + " UI node: " + e.getMessage());
+        }
+    }
+
+    private void removeEntity(Entity entity, String label) {
+        if (entity == null) {
+            return;
+        }
+        try {
+            entity.removeFromWorld();
+        } catch (RuntimeException e) {
+            System.err.println("Could not remove " + label + " entity: " + e.getMessage());
+        }
     }
 }

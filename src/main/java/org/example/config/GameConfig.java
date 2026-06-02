@@ -19,9 +19,10 @@ public class GameConfig {
     public static final int PLAYER_SIZE = 40;
     public static final int PLAYER_START_X = 100;
     public static final int PLAYER_START_Y = 300;
-    public static final double PLAYER_SPEED = 3;
-    public static final double PLAYER_GRAVITY = 0.3;
-    public static final double PLAYER_JUMP_STRENGTH = -12;
+    // Values are expressed per second and scaled by delta time.
+    public static final double PLAYER_SPEED = 180;
+    public static final double PLAYER_GRAVITY = 1080;
+    public static final double PLAYER_JUMP_STRENGTH = -720;
 
     // Tile size (used for block-based terrain)
     public static final int TILE_SIZE = 40;

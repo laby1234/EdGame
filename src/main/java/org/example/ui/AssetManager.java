@@ -37,9 +37,7 @@ public class AssetManager {
 
 
     public static Font loadFont(String fontPath, double size) {
-        InputStream is = null;
-        try {
-            is = AssetManager.class.getResourceAsStream("/" + fontPath);
+        try (InputStream is = AssetManager.class.getResourceAsStream("/" + fontPath)) {
             if (is == null) {
                 System.err.println("Could not find font resource: /" + fontPath + " - using system font fallback");
                 return Font.font("System", size);
@@ -52,13 +50,9 @@ public class AssetManager {
             }
             System.out.println("Pomyślnie załadowano czcionkę z pliku [" + fontPath + "]. Jej nazwa systemowa to: " + f.getName());
             return f;
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             System.err.println("Could not load font: " + fontPath + " - Using system font. Exception: " + e.getMessage());
             return Font.font("System", size);
-        } finally {
-            if (is != null) {
-                try { is.close(); } catch (Exception ignored) {}
-            }
         }
     }
 
@@ -66,12 +60,17 @@ public class AssetManager {
      * Load image from resources
      */
     public static Image loadImage(String imagePath) {
-        try {
-            return new Image(AssetManager.class.getResourceAsStream("/" + imagePath));
-        } catch (Exception e) {
+        InputStream is = AssetManager.class.getResourceAsStream("/" + imagePath);
+        if (is == null) {
             System.err.println("Could not load image: " + imagePath);
             return null;
         }
+        Image image = new Image(is);
+        if (image.isError()) {
+            System.err.println("Could not load image: " + imagePath + " - " + image.getException());
+            return null;
+        }
+        return image;
     }
 
     /**
