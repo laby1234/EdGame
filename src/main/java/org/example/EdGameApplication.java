@@ -4,6 +4,7 @@ import com.almasb.fxgl.app.GameApplication;
 import com.almasb.fxgl.app.GameSettings;
 import com.almasb.fxgl.input.UserAction;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
 import org.example.config.GameConfig;
 import org.example.screen.GameScreen;
 import org.example.screen.MenuScreen;
@@ -127,12 +128,49 @@ public class EdGameApplication extends GameApplication {
                     gameScreen.getPlayerComponent().requestJump();
             }
         }, KeyCode.SPACE);
+
+        getInput().addAction(new UserAction("SwordAttack") {
+            @Override
+            protected void onActionBegin() {
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                    gameScreen.getPlayerComponent().selectSword();
+            }
+        }, KeyCode.J);
+
+        getInput().addAction(new UserAction("BowAttack") {
+            @Override
+            protected void onActionBegin() {
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                    gameScreen.getPlayerComponent().selectBow();
+            }
+        }, KeyCode.K);
+
+        getInput().addAction(new UserAction("UseWeapon") {
+            @Override
+            protected void onActionBegin() {
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                    gameScreen.getPlayerComponent().startWeaponAction();
+            }
+
+            @Override
+            protected void onActionEnd() {
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                    gameScreen.getPlayerComponent().releaseWeaponAction();
+            }
+        }, MouseButton.PRIMARY);
     }
 
     @Override
     protected void initGame() {
         currentState = GameState.MENU;
         showMenuScreen();
+    }
+
+    @Override
+    protected void onUpdate(double tpf) {
+        if (currentState == GameState.PLAYING && gameScreen != null) {
+            gameScreen.update();
+        }
     }
 
     private void showMenuScreen() {
