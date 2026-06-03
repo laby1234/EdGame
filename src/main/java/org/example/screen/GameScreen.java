@@ -12,6 +12,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import org.example.config.GameConfig;
@@ -33,6 +34,9 @@ public class GameScreen extends Screen {
     private static final String DEATH_LABEL_TEXT = "YOU DIED";
     private static final String DEATH_HINT_TEXT = "Press R to restart";
     private static final DropShadow TITLE_SHADOW = createShadow();
+    private static final double HUD_SCALE = 0.4;
+    private static final double DAMAGE_TEXT_LIFETIME = 0.45;
+    private static final double DAMAGE_TEXT_RISE_SPEED = 24.0;
 
     private Entity player;
     private PlayerComponent playerComponent;
@@ -42,16 +46,18 @@ public class GameScreen extends Screen {
     private StackPane deathOverlay;
     private Rectangle playerHealthFill;
     private Label playerHealthLabel;
-    private Label weaponLabel;
+    private Label playerNameLabel;
+    private ImageView weaponIcon;
+    private Image weaponSwordImage;
+    private Image weaponBowImage;
     private Label scoreLabel;
-    private Label combatTextLabel;
-    private double combatTextTimer = 0;
     private int score = 0;
 
     private final List<Entity> platforms = new ArrayList<>();
     private final List<Entity> obstacles = new ArrayList<>();
     private final List<Entity> enemies = new ArrayList<>();
     private final List<Entity> pickups = new ArrayList<>();
+    private final List<DamageTextEntry> damageTexts = new ArrayList<>();
 
     private final Runnable onRestartCallback;
     private final Runnable onMenuCallback;
@@ -80,7 +86,7 @@ public class GameScreen extends Screen {
         StackPane.setAlignment(titleLabel, Pos.TOP_CENTER);
 
         Label hintLabel = new Label("R — restart");
-        hintLabel.setText("LMB - use  |  J - sword  |  K - bow  |  R - restart");
+        hintLabel.setText("LMB - use  |  Scroll - weapon  |  R - restart");
         hintLabel.setFont(AssetManager.getSmallFont());
         hintLabel.setTextFill(UIStyle.TEXT_COLOR);
         hintLabel.setPadding(new Insets(16, 14, 0, 0));
@@ -89,10 +95,7 @@ public class GameScreen extends Screen {
         HBox healthBox = createPlayerHealthHud();
         StackPane.setAlignment(healthBox, Pos.TOP_LEFT);
 
-        combatTextLabel = createCombatTextLabel();
-        StackPane.setAlignment(combatTextLabel, Pos.CENTER);
-
-        hudRoot.getChildren().addAll(titleLabel, hintLabel, healthBox, combatTextLabel);
+        hudRoot.getChildren().addAll(titleLabel, hintLabel, healthBox);
         getGameScene().addUINode(hudRoot);
 
         background = createScrollingBackground();
@@ -143,13 +146,13 @@ public class GameScreen extends Screen {
 
     private void spawnEnemies() {
         int groundEnemyY = GameConfig.GROUND_Y - GameConfig.ENEMY_HEIGHT;
-        enemies.add(EntityFactory.createEnemy(520, groundEnemyY, 120, player, playerComponent, this::addScore, this::showCombatText));
-        enemies.add(EntityFactory.createEnemy(980, groundEnemyY, 140, player, playerComponent, this::addScore, this::showCombatText));
-        enemies.add(EntityFactory.createEnemy(1480, groundEnemyY, 160, player, playerComponent, this::addScore, this::showCombatText));
-        enemies.add(EntityFactory.createEnemy(2360, groundEnemyY, 160, player, playerComponent, this::addScore, this::showCombatText));
-        enemies.add(EntityFactory.createEnemy(2880, groundEnemyY, 130, player, playerComponent, this::addScore, this::showCombatText));
-        enemies.add(EntityFactory.createEnemy(1480, 440 - GameConfig.ENEMY_HEIGHT, 1464, 1530, player, playerComponent, this::addScore, this::showCombatText));
-        enemies.add(EntityFactory.createEnemy(2110, 450 - GameConfig.ENEMY_HEIGHT, 1986, 2020, player, playerComponent, this::addScore, this::showCombatText));
+        enemies.add(EntityFactory.createEnemy(520, groundEnemyY, 120, player, playerComponent, this::addScore, this::showDamageText));
+        enemies.add(EntityFactory.createEnemy(980, groundEnemyY, 140, player, playerComponent, this::addScore, this::showDamageText));
+        enemies.add(EntityFactory.createEnemy(1480, groundEnemyY, 160, player, playerComponent, this::addScore, this::showDamageText));
+        enemies.add(EntityFactory.createEnemy(2360, groundEnemyY, 160, player, playerComponent, this::addScore, this::showDamageText));
+        enemies.add(EntityFactory.createEnemy(2880, groundEnemyY, 130, player, playerComponent, this::addScore, this::showDamageText));
+        enemies.add(EntityFactory.createEnemy(1480, 440 - GameConfig.ENEMY_HEIGHT, 1464, 1530, player, playerComponent, this::addScore, this::showDamageText));
+        enemies.add(EntityFactory.createEnemy(2110, 450 - GameConfig.ENEMY_HEIGHT, 1986, 2020, player, playerComponent, this::addScore, this::showDamageText));
     }
 
     private void spawnPickups() {
@@ -241,10 +244,17 @@ public class GameScreen extends Screen {
 
     @Override
     public void update() {
-        if (combatTextLabel != null && combatTextTimer > 0) {
-            combatTextTimer = Math.max(0, combatTextTimer - 1.0 / 60.0);
-            combatTextLabel.setVisible(combatTextTimer > 0);
-        }
+        double dt = 1.0 / 60.0;
+        damageTexts.removeIf(entry -> {
+            entry.timer -= dt;
+            if (entry.timer <= 0) {
+                removeEntity(entry.entity, "damage text");
+                return true;
+            }
+            entry.entity.translateY(-DAMAGE_TEXT_RISE_SPEED * dt);
+            entry.entity.getViewComponent().setOpacity(Math.min(1.0, entry.timer / DAMAGE_TEXT_LIFETIME));
+            return false;
+        });
     }
 
     @Override
@@ -269,10 +279,14 @@ public class GameScreen extends Screen {
         for (Entity e : new ArrayList<>(getGameWorld().getEntitiesByType(org.example.entity.EntityType.PLAYER_ARROW))) {
             removeEntity(e, "player arrow");
         }
+        for (DamageTextEntry entry : new ArrayList<>(damageTexts)) {
+            removeEntity(entry.entity, "damage text");
+        }
         platforms.clear();
         obstacles.clear();
         enemies.clear();
         pickups.clear();
+        damageTexts.clear();
         player = null;
         playerComponent = null;
         hudRoot = null;
@@ -284,39 +298,99 @@ public class GameScreen extends Screen {
     }
 
     private HBox createPlayerHealthHud() {
-        HBox healthBox = new HBox(8);
+        HBox healthBox = new HBox(12);
         healthBox.setAlignment(Pos.CENTER_LEFT);
         healthBox.setPadding(new Insets(16, 0, 0, 14));
         healthBox.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         healthBox.setPickOnBounds(false);
 
-        playerHealthLabel = new Label("HP");
+        Image statusBg = AssetManager.loadImage(AssetManager.HUD_STATUS);
+        Image weaponBg = AssetManager.loadImage(AssetManager.HUD_WEAPON);
+        weaponSwordImage = AssetManager.loadImage("assets/textures/blocks/sword.png");
+        weaponBowImage = AssetManager.loadImage("assets/textures/blocks/bow.png");
+
+        StackPane statusHud = new StackPane();
+        if (statusBg != null) {
+            ImageView statusView = new ImageView(statusBg);
+            statusView.setSmooth(false);
+            statusView.setFitWidth(statusBg.getWidth() * HUD_SCALE);
+            statusView.setFitHeight(statusBg.getHeight() * HUD_SCALE);
+            statusHud.getChildren().add(statusView);
+            statusHud.setPrefSize(statusBg.getWidth() * HUD_SCALE, statusBg.getHeight() * HUD_SCALE);
+        } else {
+            statusHud.setPrefSize(220 * HUD_SCALE, 64 * HUD_SCALE);
+        }
+
+        Pane statusOverlay = new Pane();
+        statusOverlay.setPrefSize(statusHud.getPrefWidth(), statusHud.getPrefHeight());
+
+        Image playerHeadImage = AssetManager.loadImage("assets/textures/sprites/player.png");
+        ImageView playerHead = new ImageView(playerHeadImage);
+        playerHead.setFitWidth(28);
+        playerHead.setFitHeight(28);
+        playerHead.setPreserveRatio(true);
+        playerHead.setSmooth(false);
+        playerHead.setTranslateX(25);
+        playerHead.setTranslateY(25);
+
+        playerNameLabel = new Label("Ed");
+        playerNameLabel.setFont(AssetManager.getSmallFont());
+        playerNameLabel.setTextFill(UIStyle.TEXT_COLOR);
+        playerNameLabel.setTranslateX(320 * HUD_SCALE);
+        playerNameLabel.setTranslateY(123 * HUD_SCALE);
+
+        Pane bar = new Pane();
+        double barW = 127;
+        double barH = 14;
+        bar.setPrefSize(barW, barH);
+        bar.setTranslateX(75);
+        bar.setTranslateY(19);
+
+        Rectangle back = new Rectangle(barW, barH);
+        back.setFill(Color.web("#2C1810"));
+        back.setStroke(UIStyle.ACCENT_COLOR);
+        back.setStrokeWidth(1.2);
+
+        playerHealthFill = new Rectangle(125, 13);
+        playerHealthFill.setTranslateX(1);
+        playerHealthFill.setTranslateY(1);
+        playerHealthFill.setFill(Color.web("#4FBF5F"));
+
+        bar.getChildren().addAll(back, playerHealthFill);
+
+        playerHealthLabel = new Label("HP 100");
         playerHealthLabel.setFont(AssetManager.getSmallFont());
         playerHealthLabel.setTextFill(UIStyle.TEXT_COLOR);
+        playerHealthLabel.setTranslateX(120);
+        playerHealthLabel.setTranslateY(17);
 
-        weaponLabel = new Label("Weapon: Sword");
-        weaponLabel.setFont(AssetManager.getSmallFont());
-        weaponLabel.setTextFill(UIStyle.TEXT_COLOR);
+        statusOverlay.getChildren().addAll(playerHead, playerNameLabel, bar, playerHealthLabel);
+        statusHud.getChildren().add(statusOverlay);
+
+        StackPane weaponHud = new StackPane();
+        if (weaponBg != null) {
+            ImageView weaponBgView = new ImageView(weaponBg);
+            weaponBgView.setSmooth(false);
+            weaponBgView.setFitWidth(weaponBg.getWidth() * HUD_SCALE);
+            weaponBgView.setFitHeight(weaponBg.getHeight() * HUD_SCALE);
+            weaponHud.getChildren().add(weaponBgView);
+            weaponHud.setPrefSize(weaponBg.getWidth() * HUD_SCALE, weaponBg.getHeight() * HUD_SCALE);
+        } else {
+            weaponHud.setPrefSize(64 * HUD_SCALE, 64 * HUD_SCALE);
+        }
+
+        weaponIcon = new ImageView(weaponSwordImage);
+        weaponIcon.setFitWidth(45);
+        weaponIcon.setFitHeight(45);
+        weaponIcon.setPreserveRatio(true);
+        weaponIcon.setSmooth(false);
+        weaponHud.getChildren().add(weaponIcon);
 
         scoreLabel = new Label("Score: 0");
         scoreLabel.setFont(AssetManager.getSmallFont());
         scoreLabel.setTextFill(UIStyle.TEXT_COLOR);
 
-        Pane bar = new Pane();
-        bar.setPrefSize(160, 14);
-
-        Rectangle back = new Rectangle(160, 14);
-        back.setFill(Color.web("#2C1810"));
-        back.setStroke(UIStyle.ACCENT_COLOR);
-        back.setStrokeWidth(1.5);
-
-        playerHealthFill = new Rectangle(157, 11);
-        playerHealthFill.setTranslateX(1.5);
-        playerHealthFill.setTranslateY(1.5);
-        playerHealthFill.setFill(Color.web("#4FBF5F"));
-
-        bar.getChildren().addAll(back, playerHealthFill);
-        healthBox.getChildren().addAll(playerHealthLabel, bar, weaponLabel, scoreLabel);
+        healthBox.getChildren().addAll(statusHud, weaponHud, scoreLabel);
         return healthBox;
     }
 
@@ -326,7 +400,7 @@ public class GameScreen extends Screen {
         }
 
         double healthPercent = (double) health / GameConfig.PLAYER_MAX_HEALTH;
-        playerHealthFill.setWidth(157 * healthPercent);
+        playerHealthFill.setWidth(125 * healthPercent);
         playerHealthLabel.setText("HP " + health);
 
         if (healthPercent <= 0.3) {
@@ -339,8 +413,14 @@ public class GameScreen extends Screen {
     }
 
     private void updateWeaponHud(String weaponName) {
-        if (weaponLabel != null) {
-            weaponLabel.setText("Weapon: " + weaponName);
+        if (weaponIcon == null) {
+            return;
+        }
+
+        if ("Bow".equalsIgnoreCase(weaponName)) {
+            weaponIcon.setImage(weaponBowImage != null ? weaponBowImage : weaponIcon.getImage());
+        } else {
+            weaponIcon.setImage(weaponSwordImage != null ? weaponSwordImage : weaponIcon.getImage());
         }
     }
 
@@ -351,23 +431,32 @@ public class GameScreen extends Screen {
         }
     }
 
-    private Label createCombatTextLabel() {
-        Label label = new Label();
+    private void showDamageText(int damage, Entity enemy) {
+        if (enemy == null) {
+            return;
+        }
+
+        Label label = new Label("-" + damage);
         label.setFont(AssetManager.getHeadingFont());
         label.setTextFill(Color.web("#FFE066"));
         label.setEffect(TITLE_SHADOW);
-        label.setVisible(false);
         label.setMouseTransparent(true);
-        return label;
+
+        double x = enemy.getX() + enemy.getWidth() * 0.5;
+        double y = enemy.getY() - 12;
+        Entity textEntity = entityBuilder().at(x, y).view(label).buildAndAttach();
+        label.setTranslateX(-label.prefWidth(-1) / 2.0);
+        damageTexts.add(new DamageTextEntry(textEntity, DAMAGE_TEXT_LIFETIME));
     }
 
-    private void showCombatText(String text) {
-        if (combatTextLabel == null) {
-            return;
+    private static class DamageTextEntry {
+        private final Entity entity;
+        private double timer;
+
+        private DamageTextEntry(Entity entity, double timer) {
+            this.entity = entity;
+            this.timer = timer;
         }
-        combatTextLabel.setText(text);
-        combatTextLabel.setVisible(true);
-        combatTextTimer = 0.35;
     }
 
     private static DropShadow createShadow() {
@@ -379,25 +468,20 @@ public class GameScreen extends Screen {
         return shadow;
     }
 
-    private void removeUINode(javafx.scene.Node node, String label) {
-        if (node == null) {
-            return;
-        }
-        try {
-            getGameScene().removeUINode(node);
-        } catch (RuntimeException e) {
-            System.err.println("Could not remove " + label + " UI node: " + e.getMessage());
-        }
-    }
-
-    private void removeEntity(Entity entity, String label) {
+    private void removeEntity(Entity entity, String reason) {
         if (entity == null) {
             return;
         }
-        try {
-            entity.removeFromWorld();
-        } catch (RuntimeException e) {
-            System.err.println("Could not remove " + label + " entity: " + e.getMessage());
+        if (entity.getWorld() != null) {
+            getGameWorld().removeEntity(entity);
         }
     }
+
+    private void removeUINode(Node node, String reason) {
+        if (node == null) {
+            return;
+        }
+        getGameScene().removeUINode(node);
+    }
 }
+

@@ -9,8 +9,8 @@ import org.example.entity.EntityType;
 import org.example.entity.player.PlayerComponent;
 import org.example.util.TimeUtil;
 
-import java.util.function.Consumer;
 import java.util.function.IntConsumer;
+import java.util.function.BiConsumer;
 
 import static com.almasb.fxgl.dsl.FXGL.getGameWorld;
 
@@ -22,7 +22,7 @@ public class EnemyComponent extends Component {
     private final double rightBound;
     private final Rectangle healthFill;
     private final IntConsumer scoreCallback;
-    private final Consumer<String> feedbackCallback;
+    private final BiConsumer<Integer, Entity> feedbackCallback;
 
     private int health = GameConfig.ENEMY_MAX_HEALTH;
     private double direction = -1;
@@ -31,7 +31,7 @@ public class EnemyComponent extends Component {
     private double flashTimer = 0;
 
     public EnemyComponent(Entity player, PlayerComponent playerComponent, double leftBound, double rightBound,
-                          Rectangle healthFill, IntConsumer scoreCallback, Consumer<String> feedbackCallback) {
+                          Rectangle healthFill, IntConsumer scoreCallback, BiConsumer<Integer, Entity> feedbackCallback) {
         this.player = player;
         this.playerComponent = playerComponent;
         this.leftBound = leftBound;
@@ -56,6 +56,7 @@ public class EnemyComponent extends Component {
 
         if (player == null || playerComponent == null || playerComponent.isDead()) {
             patrol(dt);
+            updateFacing();
             return;
         }
 
@@ -63,6 +64,7 @@ public class EnemyComponent extends Component {
         double enemyCenterX = entity.getX() + GameConfig.ENEMY_WIDTH / 2.0;
         double distanceX = playerCenterX - enemyCenterX;
         double distanceY = Math.abs(player.getY() - entity.getY());
+        double attackRange = Math.max(18, GameConfig.ENEMY_ATTACK_RANGE - 10);
 
         if (Math.abs(distanceX) <= GameConfig.ENEMY_AGGRO_RANGE && distanceY < GameConfig.TILE_SIZE * 2.0) {
             direction = Math.signum(distanceX);
@@ -70,7 +72,7 @@ public class EnemyComponent extends Component {
                 direction = 1;
             }
 
-            if (Math.abs(distanceX) > GameConfig.ENEMY_ATTACK_RANGE) {
+            if (Math.abs(distanceX) > attackRange) {
                 move(direction, dt);
             } else if (attackTimer <= 0) {
                 playerComponent.takeDamage(GameConfig.PLAYER_CONTACT_DAMAGE, Math.signum(distanceX));
@@ -79,6 +81,13 @@ public class EnemyComponent extends Component {
         } else {
             patrol(dt);
         }
+
+        updateFacing();
+    }
+
+    private void updateFacing() {
+        double scaleX = direction >= 0 ? 1 : -1;
+        entity.getViewComponent().getChildren().forEach(node -> node.setScaleX(scaleX));
     }
 
     public void takeDamage(int damage, double hitDirection) {
@@ -86,7 +95,7 @@ public class EnemyComponent extends Component {
         knockbackVelocity = (hitDirection < 0 ? -1 : 1) * GameConfig.ENEMY_KNOCKBACK;
         flashHit();
         if (feedbackCallback != null) {
-            feedbackCallback.accept("-" + damage);
+            feedbackCallback.accept(damage, entity);
         }
         updateHealthBar();
         if (health == 0) {

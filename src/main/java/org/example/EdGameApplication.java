@@ -5,6 +5,7 @@ import com.almasb.fxgl.app.GameSettings;
 import com.almasb.fxgl.input.UserAction;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.ScrollEvent;
 import org.example.config.GameConfig;
 import org.example.screen.GameScreen;
 import org.example.screen.MenuScreen;
@@ -129,21 +130,11 @@ public class EdGameApplication extends GameApplication {
             }
         }, KeyCode.SPACE);
 
-        getInput().addAction(new UserAction("SwordAttack") {
-            @Override
-            protected void onActionBegin() {
-                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
-                    gameScreen.getPlayerComponent().selectSword();
+        getInput().addEventHandler(ScrollEvent.SCROLL, event -> {
+            if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
+                gameScreen.getPlayerComponent().switchWeaponByScroll(event.getDeltaY());
             }
-        }, KeyCode.J);
-
-        getInput().addAction(new UserAction("BowAttack") {
-            @Override
-            protected void onActionBegin() {
-                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
-                    gameScreen.getPlayerComponent().selectBow();
-            }
-        }, KeyCode.K);
+        });
 
         getInput().addAction(new UserAction("UseWeapon") {
             @Override

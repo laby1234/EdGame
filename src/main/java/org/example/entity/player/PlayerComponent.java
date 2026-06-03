@@ -4,8 +4,6 @@ import com.almasb.fxgl.entity.Entity;
 import com.almasb.fxgl.entity.component.Component;
 import com.almasb.fxgl.texture.Texture;
 import javafx.scene.layout.StackPane;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import org.example.config.GameConfig;
 import org.example.entity.EntityFactory;
 import org.example.entity.EntityType;
@@ -55,7 +53,8 @@ public class PlayerComponent extends Component {
     private Weapon activeWeapon = Weapon.SWORD;
 
     private StackPane textureContainer;
-    private final Rectangle swordView = createSwordView();
+    private final Texture swordView = createSwordView();
+    private final Texture bowView = createBowView();
 
     public void setTextureContainer(StackPane container) {
         this.textureContainer = container;
@@ -104,7 +103,20 @@ public class PlayerComponent extends Component {
 
     public void selectBow() {
         activeWeapon = Weapon.BOW;
+        chargingBow = false;
+        bowChargeTime = 0;
         notifyWeaponChanged();
+    }
+
+    public void switchWeaponByScroll(double deltaY) {
+        if (dead || deltaY == 0) {
+            return;
+        }
+        if (deltaY > 0) {
+            selectSword();
+        } else {
+            selectBow();
+        }
     }
 
     public void startWeaponAction() {
@@ -162,6 +174,7 @@ public class PlayerComponent extends Component {
 
         chargingBow = true;
         bowChargeTime = 0;
+        updateBowView();
     }
 
     private void releaseBowShot() {
@@ -171,6 +184,7 @@ public class PlayerComponent extends Component {
 
         chargingBow = false;
         arrowCooldown = GameConfig.ARROW_COOLDOWN;
+        updateBowView();
         double arrowX = facingRight ? entity.getX() + GameConfig.PLAYER_SIZE : entity.getX() - 34;
         double arrowY = entity.getY() + GameConfig.PLAYER_SIZE * 0.45;
         double directionX = facingRight ? 1 : -1;
@@ -296,6 +310,7 @@ public class PlayerComponent extends Component {
         updateAnimation(tpf);
         updateDamageFlash();
         updateSwordView();
+        updateBowView();
     }
 
     private void checkPlatformCollisions(double dy) {
@@ -405,6 +420,7 @@ public class PlayerComponent extends Component {
             Texture newTexture = texture(textureName, GameConfig.PLAYER_SIZE, GameConfig.PLAYER_SIZE);
             textureContainer.getChildren().add(newTexture);
             updateSwordView();
+            updateBowView();
         } catch (RuntimeException e) {
             System.err.println("Could not update player texture: " + textureName + " - " + e.getMessage());
         }
@@ -443,16 +459,34 @@ public class PlayerComponent extends Component {
             textureContainer.getChildren().remove(swordView);
         }
 
-        swordView.setTranslateX(facingRight ? 28 : -28);
-        swordView.setTranslateY(13);
-        swordView.setRotate(facingRight ? -18 : 18);
+        swordView.setTranslateX(26);
+        //swordView.setTranslateY(13);
+        swordView.setRotate(-18);
     }
 
-    private void updateDamageFlash() {
+    private void updateBowView() {
         if (textureContainer == null) {
             return;
         }
-        textureContainer.setOpacity(flashTimer > 0 ? 0.45 : 1.0);
+
+        boolean shouldShow = chargingBow;
+        if (shouldShow && !textureContainer.getChildren().contains(bowView)) {
+            textureContainer.getChildren().add(bowView);
+        } else if (!shouldShow) {
+            textureContainer.getChildren().remove(bowView);
+        }
+
+        bowView.setTranslateX(5);
+        //bowView.setTranslateY(0);
+        bowView.setRotate(0);
+    }
+
+    private static Texture createSwordView() {
+        return texture("blocks/sword.png", 48, 16);
+    }
+
+    private static Texture createBowView() {
+        return texture("blocks/bow.png", 16, 36);
     }
 
     private void updateFacingFromMouse() {
@@ -466,13 +500,10 @@ public class PlayerComponent extends Component {
         textureContainer.setScaleX(facingRight ? 1 : -1);
     }
 
-    private static Rectangle createSwordView() {
-        Rectangle sword = new Rectangle(34, 6);
-        sword.setFill(Color.web("#DDE6F0"));
-        sword.setStroke(Color.web("#FFFFFF"));
-        sword.setStrokeWidth(1);
-        sword.setArcWidth(3);
-        sword.setArcHeight(3);
-        return sword;
+    private void updateDamageFlash() {
+        if (textureContainer == null) {
+            return;
+        }
+        textureContainer.setOpacity(flashTimer > 0 ? 0.45 : 1.0);
     }
 }

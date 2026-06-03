@@ -14,6 +14,8 @@ public class AssetManager {
     public static final String MENU_BG = UI_PATH + "backgrounds/background.png";
     public static final String SETTINGS_BG = UI_PATH + "backgrounds/settings_bg.png";
     public static final String PAUSE_BG = UI_PATH + "backgrounds/pause_bg.png";
+    public static final String HUD_STATUS = UI_PATH + "hud_status.png";
+    public static final String HUD_WEAPON = UI_PATH + "hud_weapon.png";
 
     public static final String BTN_NORMAL = UI_PATH + "buttons/btn_normal.png";
     public static final String BTN_HOVER = UI_PATH + "buttons/btn_hover.png";
@@ -48,7 +50,7 @@ public class AssetManager {
                 System.err.println("Font.loadFont returned null for: /" + fontPath + " - using system font fallback");
                 return Font.font("System", size);
             }
-            System.out.println("Pomyślnie załadowano czcionkę z pliku [" + fontPath + "]. Jej nazwa systemowa to: " + f.getName());
+            //System.out.println("Pomyślnie załadowano czcionkę z pliku [" + fontPath + "]. Jej nazwa systemowa to: " + f.getName());
             return f;
         } catch (java.io.IOException e) {
             System.err.println("Could not load font: " + fontPath + " - Using system font. Exception: " + e.getMessage());
@@ -101,4 +103,3 @@ public class AssetManager {
         return loadFont(UIStyle.MENU_FONT, SMALL_SIZE);
     }
 }
-
