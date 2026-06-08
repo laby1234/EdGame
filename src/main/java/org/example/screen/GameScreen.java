@@ -3,8 +3,9 @@ package org.example.screen;
 import com.almasb.fxgl.entity.Entity;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.effect.DropShadow;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
@@ -12,11 +13,11 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import org.example.config.GameConfig;
 import org.example.entity.EntityFactory;
+import org.example.entity.EntityType;
 import org.example.entity.player.PlayerComponent;
 import org.example.ui.AssetManager;
 import org.example.ui.ProfessionalButton;
@@ -24,6 +25,7 @@ import org.example.ui.UIStyle;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static com.almasb.fxgl.dsl.FXGL.entityBuilder;
 import static com.almasb.fxgl.dsl.FXGL.getGameScene;
@@ -31,17 +33,26 @@ import static com.almasb.fxgl.dsl.FXGL.getGameWorld;
 
 public class GameScreen extends Screen {
 
+    private enum LevelType {
+        FOREST,
+        CAVE
+    }
+
     private static final String DEATH_LABEL_TEXT = "YOU DIED";
     private static final String DEATH_HINT_TEXT = "Press R to restart";
     private static final DropShadow TITLE_SHADOW = createShadow();
     private static final double HUD_SCALE = 0.4;
     private static final double DAMAGE_TEXT_LIFETIME = 0.45;
     private static final double DAMAGE_TEXT_RISE_SPEED = 24.0;
+    public static final String BOW = "Bow";
 
     private Entity player;
     private PlayerComponent playerComponent;
     private Entity ground;
     private Entity background;
+    private Entity portal;
+    private Entity chest;
+
     private StackPane hudRoot;
     private StackPane deathOverlay;
     private Rectangle playerHealthFill;
@@ -51,7 +62,12 @@ public class GameScreen extends Screen {
     private Image weaponSwordImage;
     private Image weaponBowImage;
     private Label scoreLabel;
+    private Label levelTitleLabel;
+
     private int score = 0;
+    private boolean playerDead = false;
+    private boolean chestOpened = false;
+    private LevelType currentLevel = LevelType.FOREST;
 
     private final List<Entity> platforms = new ArrayList<>();
     private final List<Entity> obstacles = new ArrayList<>();
@@ -62,31 +78,46 @@ public class GameScreen extends Screen {
     private final Runnable onRestartCallback;
     private final Runnable onMenuCallback;
     private final Runnable onGameOverCallback;
+    private final Runnable onVictoryCallback;
 
-    public GameScreen(Runnable onRestartCallback, Runnable onMenuCallback, Runnable onGameOverCallback) {
+    public GameScreen(Runnable onRestartCallback, Runnable onMenuCallback, Runnable onGameOverCallback, Runnable onVictoryCallback) {
         this.onRestartCallback = onRestartCallback;
         this.onMenuCallback = onMenuCallback;
         this.onGameOverCallback = onGameOverCallback;
+        this.onVictoryCallback = onVictoryCallback;
     }
 
     @Override
     public void init() {
         getGameScene().setBackgroundColor(Color.WHITE);
+        createHud();
 
+        player = EntityFactory.createPlayer();
+        playerComponent = EntityFactory.getPlayerComponent(player);
+        playerComponent.setOnDeath(this::onPlayerDied);
+        playerComponent.setOnHealthChanged(this::updatePlayerHealthHud);
+        playerComponent.setOnWeaponChanged(this::updateWeaponHud);
+
+        loadLevel(LevelType.FOREST, true);
+
+        getGameScene().getViewport().setBounds(0, 0, GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT);
+        getGameScene().getViewport().bindToEntity(player, GameConfig.WINDOW_WIDTH / 2.0, GameConfig.WINDOW_HEIGHT / 2.0);
+    }
+
+    private void createHud() {
         hudRoot = new StackPane();
         hudRoot.setPickOnBounds(false);
         hudRoot.setPrefWidth(GameConfig.WINDOW_WIDTH);
         hudRoot.setPrefHeight(GameConfig.WINDOW_HEIGHT);
 
-        Label titleLabel = new Label("Forest");
-        titleLabel.setFont(AssetManager.getTitleFont());
-        titleLabel.setTextFill(UIStyle.ACCENT_COLOR);
-        titleLabel.setEffect(TITLE_SHADOW);
-        titleLabel.setPadding(new Insets(14, 0, 0, 0));
-        StackPane.setAlignment(titleLabel, Pos.TOP_CENTER);
+        levelTitleLabel = new Label("Forest");
+        levelTitleLabel.setFont(AssetManager.getTitleFont());
+        levelTitleLabel.setTextFill(UIStyle.ACCENT_COLOR);
+        levelTitleLabel.setEffect(TITLE_SHADOW);
+        levelTitleLabel.setPadding(new Insets(14, 0, 0, 0));
+        StackPane.setAlignment(levelTitleLabel, Pos.TOP_CENTER);
 
-        Label hintLabel = new Label("R — restart");
-        hintLabel.setText("LMB - use  |  Scroll - weapon  |  R - restart");
+        Label hintLabel = new Label("LMB - use | Scroll - weapon | R - restart");
         hintLabel.setFont(AssetManager.getSmallFont());
         hintLabel.setTextFill(UIStyle.TEXT_COLOR);
         hintLabel.setPadding(new Insets(16, 14, 0, 0));
@@ -95,32 +126,52 @@ public class GameScreen extends Screen {
         HBox healthBox = createPlayerHealthHud();
         StackPane.setAlignment(healthBox, Pos.TOP_LEFT);
 
-        hudRoot.getChildren().addAll(titleLabel, hintLabel, healthBox);
+        hudRoot.getChildren().addAll(levelTitleLabel, hintLabel, healthBox);
         getGameScene().addUINode(hudRoot);
-
-        background = createScrollingBackground();
-        ground = EntityFactory.createGround();
-
-        spawnPlatformsAndObstacles();
-
-        player = EntityFactory.createPlayer();
-        playerComponent = EntityFactory.getPlayerComponent(player);
-        playerComponent.setOnDeath(this::onPlayerDied);
-        playerComponent.setOnHealthChanged(this::updatePlayerHealthHud);
-        playerComponent.setOnWeaponChanged(this::updateWeaponHud);
-
-        spawnEnemies();
-        spawnPickups();
-
-        getGameScene().getViewport().setBounds(0, 0, GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT);
-        getGameScene().getViewport().bindToEntity(player, GameConfig.WINDOW_WIDTH / 2.0, GameConfig.WINDOW_HEIGHT / 2.0);
     }
 
-    private void spawnPlatformsAndObstacles() {
-        // --- Platforms (x, y, width in tiles) ---
-        platforms.add(EntityFactory.createPlatform(350,  480, 4));
-        platforms.add(EntityFactory.createPlatform(600,  400, 3));
-        platforms.add(EntityFactory.createPlatform(880,  460, 4));
+    private void loadLevel(LevelType level, boolean firstLoad) {
+        clearLevelEntities();
+
+        currentLevel = level;
+        chestOpened = false;
+        playerDead = false;
+        updateLevelTitle();
+
+        background = createScrollingBackground(level == LevelType.FOREST ? AssetManager.MENU_BG : AssetManager.CAVE_BG);
+        ground = (level == LevelType.FOREST ? EntityFactory.createGround() : EntityFactory.createCaveGround());
+
+        if (level == LevelType.FOREST) {
+            spawnForestLayout();
+            spawnForestEnemies();
+            spawnForestPickups();
+            portal = EntityFactory.createPortal(GameConfig.WORLD_WIDTH - 130, GameConfig.GROUND_Y - GameConfig.PORTAL_SIZE);
+        } else {
+            spawnCaveLayout();
+            spawnCaveEnemies();
+            spawnCavePickups();
+            chest = EntityFactory.createChest(GameConfig.WORLD_WIDTH - 140, GameConfig.GROUND_Y - GameConfig.CHEST_HEIGHT, false);
+        }
+
+        if (firstLoad) {
+            player.setX(GameConfig.PLAYER_START_X);
+            player.setY(GameConfig.PLAYER_START_Y);
+        } else {
+            player.setX(GameConfig.PLAYER_START_X);
+            player.setY(GameConfig.GROUND_Y - GameConfig.PLAYER_SIZE);
+        }
+    }
+
+    private void updateLevelTitle() {
+        if (levelTitleLabel != null) {
+            levelTitleLabel.setText(currentLevel == LevelType.FOREST ? "Forest" : "Cave");
+        }
+    }
+
+    private void spawnForestLayout() {
+        platforms.add(EntityFactory.createPlatform(350, 480, 4));
+        platforms.add(EntityFactory.createPlatform(600, 400, 3));
+        platforms.add(EntityFactory.createPlatform(880, 460, 4));
         platforms.add(EntityFactory.createPlatform(1100, 360, 3));
         platforms.add(EntityFactory.createPlatform(1380, 440, 5));
         platforms.add(EntityFactory.createPlatform(1700, 380, 3));
@@ -129,33 +180,62 @@ public class GameScreen extends Screen {
         platforms.add(EntityFactory.createPlatform(2560, 420, 4));
         platforms.add(EntityFactory.createPlatform(2860, 460, 3));
 
-        // --- Obstacles on ground ---
         int groundObstacleY = GameConfig.GROUND_Y - GameConfig.TILE_SIZE;
-        obstacles.add(EntityFactory.createObstacle(230,  groundObstacleY));
-        obstacles.add(EntityFactory.createObstacle(750,  groundObstacleY));
+        obstacles.add(EntityFactory.createObstacle(230, groundObstacleY));
+        obstacles.add(EntityFactory.createObstacle(750, groundObstacleY));
         obstacles.add(EntityFactory.createObstacle(1250, groundObstacleY));
         obstacles.add(EntityFactory.createObstacle(1600, groundObstacleY));
         obstacles.add(EntityFactory.createObstacle(2150, groundObstacleY));
         obstacles.add(EntityFactory.createObstacle(2700, groundObstacleY));
         obstacles.add(EntityFactory.createObstacle(3100, groundObstacleY));
 
-        // --- Obstacles on platforms (y = platform.y - TILE_SIZE) ---
         obstacles.add(EntityFactory.createObstacle(1420, 440 - GameConfig.TILE_SIZE));
         obstacles.add(EntityFactory.createObstacle(2060, 450 - GameConfig.TILE_SIZE));
     }
 
-    private void spawnEnemies() {
-        int groundEnemyY = GameConfig.GROUND_Y - GameConfig.ENEMY_HEIGHT;
-        enemies.add(EntityFactory.createEnemy(520, groundEnemyY, 120, player, playerComponent, this::addScore, this::showDamageText));
-        enemies.add(EntityFactory.createEnemy(980, groundEnemyY, 140, player, playerComponent, this::addScore, this::showDamageText));
-        enemies.add(EntityFactory.createEnemy(1480, groundEnemyY, 160, player, playerComponent, this::addScore, this::showDamageText));
-        enemies.add(EntityFactory.createEnemy(2360, groundEnemyY, 160, player, playerComponent, this::addScore, this::showDamageText));
-        enemies.add(EntityFactory.createEnemy(2880, groundEnemyY, 130, player, playerComponent, this::addScore, this::showDamageText));
-        enemies.add(EntityFactory.createEnemy(1480, 440 - GameConfig.ENEMY_HEIGHT, 1464, 1530, player, playerComponent, this::addScore, this::showDamageText));
-        enemies.add(EntityFactory.createEnemy(2110, 450 - GameConfig.ENEMY_HEIGHT, 1986, 2020, player, playerComponent, this::addScore, this::showDamageText));
+    private void spawnCaveLayout() {
+        platforms.add(EntityFactory.createStonePlatform(420, 500, 5));
+        platforms.add(EntityFactory.createStonePlatform(820, 420, 4));
+        platforms.add(EntityFactory.createStonePlatform(1200, 340, 3));
+        platforms.add(EntityFactory.createStonePlatform(1540, 420, 5));
+        platforms.add(EntityFactory.createStonePlatform(1940, 330, 3));
+        platforms.add(EntityFactory.createStonePlatform(2280, 430, 4));
+        platforms.add(EntityFactory.createStonePlatform(2660, 360, 5));
+        platforms.add(EntityFactory.createStonePlatform(3160, 300, 3));
+
+        int groundObstacleY = GameConfig.GROUND_Y - GameConfig.TILE_SIZE;
+        obstacles.add(EntityFactory.createObstacle(520, groundObstacleY));
+        obstacles.add(EntityFactory.createObstacle(960, groundObstacleY));
+        obstacles.add(EntityFactory.createObstacle(1460, groundObstacleY));
+        obstacles.add(EntityFactory.createObstacle(2080, groundObstacleY));
+        obstacles.add(EntityFactory.createObstacle(2480, groundObstacleY));
+
+        obstacles.add(EntityFactory.createObstacle(1230, 340 - GameConfig.TILE_SIZE));
+        obstacles.add(EntityFactory.createObstacle(2310, 430 - GameConfig.TILE_SIZE));
     }
 
-    private void spawnPickups() {
+    private void spawnForestEnemies() {
+        int groundEnemyY = GameConfig.GROUND_Y - GameConfig.ENEMY_HEIGHT;
+        enemies.add(EntityFactory.createEnemy(520, groundEnemyY, 120, player, playerComponent, this::addScore, this::showDamageText, () -> tryDropHeart(520, groundEnemyY)));
+        enemies.add(EntityFactory.createEnemy(980, groundEnemyY, 140, player, playerComponent, this::addScore, this::showDamageText, () -> tryDropHeart(980, groundEnemyY)));
+        enemies.add(EntityFactory.createEnemy(1480, groundEnemyY, 160, player, playerComponent, this::addScore, this::showDamageText, () -> tryDropHeart(1480, groundEnemyY)));
+        enemies.add(EntityFactory.createEnemy(2360, groundEnemyY, 160, player, playerComponent, this::addScore, this::showDamageText, () -> tryDropHeart(2360, groundEnemyY)));
+        enemies.add(EntityFactory.createEnemy(2880, groundEnemyY, 130, player, playerComponent, this::addScore, this::showDamageText, () -> tryDropHeart(2880, groundEnemyY)));
+        enemies.add(EntityFactory.createEnemy(1480, 440 - GameConfig.ENEMY_HEIGHT, 1464, 1530, player, playerComponent, this::addScore, this::showDamageText, () -> tryDropHeart(1480, 440 - GameConfig.ENEMY_HEIGHT)));
+        enemies.add(EntityFactory.createEnemy(2110, 450 - GameConfig.ENEMY_HEIGHT, 1986, 2020, player, playerComponent, this::addScore, this::showDamageText, () -> tryDropHeart(2110, 450 - GameConfig.ENEMY_HEIGHT)));
+    }
+
+    private void spawnCaveEnemies() {
+        int groundEnemyY = GameConfig.GROUND_Y - GameConfig.ENEMY_HEIGHT;
+        enemies.add(EntityFactory.createCaveEnemy(640, groundEnemyY, 520, 860, player, playerComponent, this::addScore, this::showDamageText, () -> tryDropHeart(640, groundEnemyY)));
+        enemies.add(EntityFactory.createCaveEnemy(1320, groundEnemyY, 1180, 1520, player, playerComponent, this::addScore, this::showDamageText, () -> tryDropHeart(1320, groundEnemyY)));
+        enemies.add(EntityFactory.createCaveEnemy(1760, 420 - GameConfig.ENEMY_HEIGHT, 1560, 1700, player, playerComponent, this::addScore, this::showDamageText, () -> tryDropHeart(1760, 420 - GameConfig.ENEMY_HEIGHT)));
+        enemies.add(EntityFactory.createCaveEnemy(2400, groundEnemyY, 2240, 2580, player, playerComponent, this::addScore, this::showDamageText, () -> tryDropHeart(2400, groundEnemyY)));
+        enemies.add(EntityFactory.createCaveEnemy(2940, 360 - GameConfig.ENEMY_HEIGHT, 2680, 2820, player, playerComponent, this::addScore, this::showDamageText, () -> tryDropHeart(2940, 360 - GameConfig.ENEMY_HEIGHT)));
+        enemies.add(EntityFactory.createCaveEnemy(3400, groundEnemyY, 3260, GameConfig.WORLD_WIDTH - 180, player, playerComponent, this::addScore, this::showDamageText, () -> tryDropHeart(3400, groundEnemyY)));
+    }
+
+    private void spawnForestPickups() {
         pickups.add(EntityFactory.createCoin(380, 440, this::addScore));
         pickups.add(EntityFactory.createCoin(430, 440, this::addScore));
         pickups.add(EntityFactory.createCoin(650, 360, this::addScore));
@@ -167,13 +247,34 @@ public class GameScreen extends Screen {
         pickups.add(EntityFactory.createCoin(2320, 310, this::addScore));
         pickups.add(EntityFactory.createCoin(2600, 380, this::addScore));
         pickups.add(EntityFactory.createCoin(2920, 420, this::addScore));
+    }
 
-        pickups.add(EntityFactory.createHeart(1340, GameConfig.GROUND_Y - GameConfig.TILE_SIZE - GameConfig.PICKUP_SIZE - 6));
-        pickups.add(EntityFactory.createHeart(2250, GameConfig.GROUND_Y - GameConfig.TILE_SIZE - GameConfig.PICKUP_SIZE - 6));
+    private void spawnCavePickups() {
+        pickups.add(EntityFactory.createCoin(470, 460, this::addScore));
+        pickups.add(EntityFactory.createCoin(860, 380, this::addScore));
+        pickups.add(EntityFactory.createCoin(1210, 300, this::addScore));
+        pickups.add(EntityFactory.createCoin(1600, 380, this::addScore));
+        pickups.add(EntityFactory.createCoin(1950, 290, this::addScore));
+        pickups.add(EntityFactory.createCoin(2330, 390, this::addScore));
+        pickups.add(EntityFactory.createCoin(2700, 320, this::addScore));
+        pickups.add(EntityFactory.createCoin(3180, 260, this::addScore));
+    }
+
+    private void tryDropHeart(double x, double y) {
+        if (ThreadLocalRandom.current().nextDouble() <= GameConfig.HEART_DROP_CHANCE) {
+            Entity heart = EntityFactory.createHeart(x + 10, y + 10);
+            pickups.add(heart);
+        }
     }
 
     private void onPlayerDied() {
-        if (onGameOverCallback != null) onGameOverCallback.run();
+        if (playerDead) {
+            return;
+        }
+        playerDead = true;
+        if (onGameOverCallback != null) {
+            onGameOverCallback.run();
+        }
         showDeathOverlay();
     }
 
@@ -197,11 +298,19 @@ public class GameScreen extends Screen {
         hintLabel.setFont(AssetManager.getTextFont());
         hintLabel.setTextFill(UIStyle.TEXT_COLOR);
 
-        ProfessionalButton restartBtn = new ProfessionalButton("↺ RESTART");
-        restartBtn.setOnAction(e -> { if (onRestartCallback != null) onRestartCallback.run(); });
+        ProfessionalButton restartBtn = new ProfessionalButton("RESTART");
+        restartBtn.setOnAction(e -> {
+            if (onRestartCallback != null) {
+                onRestartCallback.run();
+            }
+        });
 
-        ProfessionalButton menuBtn = new ProfessionalButton("⌂ MENU");
-        menuBtn.setOnAction(e -> { if (onMenuCallback != null) onMenuCallback.run(); });
+        ProfessionalButton menuBtn = new ProfessionalButton("MENU");
+        menuBtn.setOnAction(e -> {
+            if (onMenuCallback != null) {
+                onMenuCallback.run();
+            }
+        });
 
         VBox content = new VBox(24, deathLabel, hintLabel, restartBtn, menuBtn);
         content.setAlignment(Pos.CENTER);
@@ -210,8 +319,8 @@ public class GameScreen extends Screen {
         getGameScene().addUINode(deathOverlay);
     }
 
-    private Entity createScrollingBackground() {
-        Image bgImage = AssetManager.loadImage(AssetManager.MENU_BG);
+    private Entity createScrollingBackground(String path) {
+        Image bgImage = AssetManager.loadImage(path);
         if (bgImage == null) {
             return entityBuilder().at(0, 0).view(new Pane()).buildAndAttach();
         }
@@ -245,52 +354,122 @@ public class GameScreen extends Screen {
     @Override
     public void update() {
         double dt = 1.0 / 60.0;
+
         damageTexts.removeIf(entry -> {
             entry.timer -= dt;
             if (entry.timer <= 0) {
-                removeEntity(entry.entity, "damage text");
+                removeEntity(entry.entity);
                 return true;
             }
             entry.entity.translateY(-DAMAGE_TEXT_RISE_SPEED * dt);
             entry.entity.getViewComponent().setOpacity(Math.min(1.0, entry.timer / DAMAGE_TEXT_LIFETIME));
             return false;
         });
+
+        if (player == null || playerComponent == null || playerComponent.isDead()) {
+            return;
+        }
+
+        if (currentLevel == LevelType.FOREST && portal != null && intersects(player, portal)) {
+            removeEntity(portal);
+            portal = null;
+            loadLevel(LevelType.CAVE, false);
+            return;
+        }
+
+        if (currentLevel == LevelType.CAVE && chest != null && !chestOpened && intersects(player, chest)) {
+            chestOpened = true;
+            double x = chest.getX();
+            double y = chest.getY();
+            removeEntity(chest);
+            chest = EntityFactory.createChest(x, y, true);
+
+            if (onVictoryCallback != null) {
+                onVictoryCallback.run();
+            }
+        }
     }
 
     @Override
     public void cleanup() {
-        removeUINode(hudRoot, "HUD root");
-        removeUINode(deathOverlay, "death overlay");
-        removeEntity(player, "player");
-        removeEntity(ground, "ground");
-        removeEntity(background, "background");
-        for (Entity e : platforms) {
-            removeEntity(e, "platform");
+        removeUINode(hudRoot);
+        removeUINode(deathOverlay);
+
+        removeEntity(player);
+        removeEntity(ground);
+        removeEntity(background);
+        removeEntity(portal);
+        removeEntity(chest);
+
+        for (Entity e : new ArrayList<>(platforms)) {
+            removeEntity(e);
         }
-        for (Entity e : obstacles) {
-            removeEntity(e, "obstacle");
+        for (Entity e : new ArrayList<>(obstacles)) {
+            removeEntity(e);
         }
-        for (Entity e : enemies) {
-            removeEntity(e, "enemy");
+        for (Entity e : new ArrayList<>(enemies)) {
+            removeEntity(e);
         }
-        for (Entity e : pickups) {
-            removeEntity(e, "pickup");
+        for (Entity e : new ArrayList<>(pickups)) {
+            removeEntity(e);
         }
-        for (Entity e : new ArrayList<>(getGameWorld().getEntitiesByType(org.example.entity.EntityType.PLAYER_ARROW))) {
-            removeEntity(e, "player arrow");
+        for (Entity e : new ArrayList<>(getGameWorld().getEntitiesByType(EntityType.PLAYER_ARROW))) {
+            removeEntity(e);
+        }
+        for (Entity e : new ArrayList<>(getGameWorld().getEntitiesByType(EntityType.ENEMY_PROJECTILE))) {
+            removeEntity(e);
         }
         for (DamageTextEntry entry : new ArrayList<>(damageTexts)) {
-            removeEntity(entry.entity, "damage text");
+            removeEntity(entry.entity);
         }
+
         platforms.clear();
         obstacles.clear();
         enemies.clear();
         pickups.clear();
         damageTexts.clear();
+
         player = null;
         playerComponent = null;
+        ground = null;
+        background = null;
+        portal = null;
+        chest = null;
         hudRoot = null;
         deathOverlay = null;
+    }
+
+    private void clearLevelEntities() {
+        removeEntity(ground);
+        removeEntity(background);
+        removeEntity(portal);
+        removeEntity(chest);
+
+        for (Entity e : new ArrayList<>(platforms)) {
+            removeEntity(e);
+        }
+        for (Entity e : new ArrayList<>(obstacles)) {
+            removeEntity(e);
+        }
+        for (Entity e : new ArrayList<>(enemies)) {
+            removeEntity(e);
+        }
+        for (Entity e : new ArrayList<>(pickups)) {
+            removeEntity(e);
+        }
+        for (Entity e : new ArrayList<>(getGameWorld().getEntitiesByType(EntityType.ENEMY_PROJECTILE))) {
+            removeEntity(e);
+        }
+
+        platforms.clear();
+        obstacles.clear();
+        enemies.clear();
+        pickups.clear();
+
+        ground = null;
+        background = null;
+        portal = null;
+        chest = null;
     }
 
     public PlayerComponent getPlayerComponent() {
@@ -326,10 +505,12 @@ public class GameScreen extends Screen {
 
         Image playerHeadImage = AssetManager.loadImage("assets/textures/sprites/player.png");
         ImageView playerHead = new ImageView(playerHeadImage);
-        playerHead.setFitWidth(28);
-        playerHead.setFitHeight(28);
-        playerHead.setPreserveRatio(true);
-        playerHead.setSmooth(false);
+        if (playerHeadImage != null) {
+            playerHead.setFitWidth(28);
+            playerHead.setFitHeight(28);
+            playerHead.setPreserveRatio(true);
+            playerHead.setSmooth(false);
+        }
         playerHead.setTranslateX(25);
         playerHead.setTranslateY(25);
 
@@ -417,7 +598,7 @@ public class GameScreen extends Screen {
             return;
         }
 
-        if ("Bow".equalsIgnoreCase(weaponName)) {
+        if (BOW.equalsIgnoreCase(weaponName)) {
             weaponIcon.setImage(weaponBowImage != null ? weaponBowImage : weaponIcon.getImage());
         } else {
             weaponIcon.setImage(weaponSwordImage != null ? weaponSwordImage : weaponIcon.getImage());
@@ -449,6 +630,20 @@ public class GameScreen extends Screen {
         damageTexts.add(new DamageTextEntry(textEntity, DAMAGE_TEXT_LIFETIME));
     }
 
+    private boolean intersects(Entity a, Entity b) {
+        double aLeft = a.getX();
+        double aRight = aLeft + a.getWidth();
+        double aTop = a.getY();
+        double aBottom = aTop + a.getHeight();
+
+        double bLeft = b.getX();
+        double bRight = bLeft + b.getWidth();
+        double bTop = b.getY();
+        double bBottom = bTop + b.getHeight();
+
+        return aRight > bLeft && aLeft < bRight && aBottom > bTop && aTop < bBottom;
+    }
+
     private static class DamageTextEntry {
         private final Entity entity;
         private double timer;
@@ -468,7 +663,7 @@ public class GameScreen extends Screen {
         return shadow;
     }
 
-    private void removeEntity(Entity entity, String reason) {
+    private void removeEntity(Entity entity) {
         if (entity == null) {
             return;
         }
@@ -477,11 +672,10 @@ public class GameScreen extends Screen {
         }
     }
 
-    private void removeUINode(Node node, String reason) {
+    private void removeUINode(Node node) {
         if (node == null) {
             return;
         }
         getGameScene().removeUINode(node);
     }
 }
-

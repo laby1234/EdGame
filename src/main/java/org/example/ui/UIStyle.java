@@ -7,14 +7,9 @@ public class UIStyle {
     public static final String TITLE_FONT = "fonts/title_font.ttf";
     public static final String MENU_FONT = "fonts/menu_font.ttf";
 
-    // Medieval Palette
-    public static final Color PRIMARY_COLOR = Color.web("#8B4513");        // Saddle Brown
-    public static final Color SECONDARY_COLOR = Color.web("#654321");      // Dark Brown
     public static final Color ACCENT_COLOR = Color.web("#FFD700");         // Gold
     public static final Color TEXT_COLOR = Color.web("#F5DEB3");           // Wheat
-    public static final Color HOVER_COLOR = Color.web("#FFD700");          // Gold
-    public static final Color DISABLED_COLOR = Color.web("#696969");       // Dim Gray
-    public static final Color SHADOW_COLOR = Color.web("#1C0F08");         // Dark Shadow
+
 
     // Background gradient - Medieval Dark Stone
     public static final String GRADIENT_BG = "-fx-background-color: linear-gradient(to bottom, #654321 0%, #3d2817 100%);";
@@ -54,34 +49,11 @@ public class UIStyle {
             " -fx-border-width: 3; " +
             " -fx-border-color: #654321 #FFD700 #FFD700 #654321;";
 
-    // Label styles - Medieval Text
-    public static final String TITLE_STYLE = "-fx-font-size: 48px; " +
-            "-fx-text-fill: #FFD700; " +
-            "-fx-font-weight: bold; " +
-            "-fx-text-shadow: 3px 3px 0px #1C0F08;";
-
-    public static final String HEADING_STYLE = "-fx-font-size: 32px; " +
-            "-fx-text-fill: #FFD700; " +
-            "-fx-font-weight: bold; " +
-            "-fx-text-shadow: 2px 2px 0px #1C0F08;";
-
-    public static final String LABEL_STYLE = "-fx-font-size: 18px; " +
-            "-fx-text-fill: #F5DEB3; " +
-            "-fx-text-shadow: 1px 1px 0px #1C0F08;";
-
-    public static final String SMALL_LABEL_STYLE = "-fx-font-size: 14px; " +
-            "-fx-text-fill: #D4A574; " +
-            "-fx-text-shadow: 1px 1px 0px #1C0F08;";
-
     // Slider styles - Medieval
     public static final String SLIDER_STYLE = "-fx-control-inner-background: #8B4513; " +
             "-fx-text-fill: #F5DEB3; " +
             "-fx-border-color: #FFD700;";
 
-    // CheckBox styles - Medieval
-    public static final String CHECKBOX_STYLE = "-fx-text-fill: #F5DEB3; " +
-            "-fx-font-size: 16px; " +
-            "-fx-text-shadow: 1px 1px 0px #1C0F08;";
 
     // Panel border - Medieval Stone
     public static final String PANEL_BORDER = "-fx-border-color: #FFD700; " +

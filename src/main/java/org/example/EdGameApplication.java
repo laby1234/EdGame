@@ -7,6 +7,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.ScrollEvent;
 import org.example.config.GameConfig;
+import org.example.screen.CreditsScreen;
 import org.example.screen.GameScreen;
 import org.example.screen.MenuScreen;
 import org.example.screen.PauseScreen;
@@ -24,6 +25,7 @@ public class EdGameApplication extends GameApplication {
     private SettingsScreen settingsScreen;
     private PauseScreen pauseScreen;
     private GameScreen gameScreen;
+    private CreditsScreen creditsScreen;
 
     @Override
     protected void initSettings(GameSettings settings) {
@@ -44,11 +46,10 @@ public class EdGameApplication extends GameApplication {
             }
         });
 
-        // R — restart (single press, works during play and after death)
         getInput().addAction(new UserAction("Restart") {
             @Override
             protected void onActionBegin() {
-                if (currentState == GameState.PLAYING || currentState == GameState.GAME_OVER) {
+                if (currentState == GameState.PLAYING || currentState == GameState.GAME_OVER || currentState == GameState.VICTORY) {
                     restartGame();
                 }
             }
@@ -57,76 +58,91 @@ public class EdGameApplication extends GameApplication {
         getInput().addAction(new UserAction("MoveLeft") {
             @Override
             protected void onActionBegin() {
-                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
                     gameScreen.getPlayerComponent().setMovingLeft(true);
+                }
             }
+
             @Override
             protected void onActionEnd() {
-                if (gameScreen != null && gameScreen.getPlayerComponent() != null)
+                if (gameScreen != null && gameScreen.getPlayerComponent() != null) {
                     gameScreen.getPlayerComponent().setMovingLeft(false);
+                }
             }
         }, KeyCode.A);
 
         getInput().addAction(new UserAction("MoveLeftArrow") {
             @Override
             protected void onActionBegin() {
-                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
                     gameScreen.getPlayerComponent().setMovingLeft(true);
+                }
             }
+
             @Override
             protected void onActionEnd() {
-                if (gameScreen != null && gameScreen.getPlayerComponent() != null)
+                if (gameScreen != null && gameScreen.getPlayerComponent() != null) {
                     gameScreen.getPlayerComponent().setMovingLeft(false);
+                }
             }
         }, KeyCode.LEFT);
 
         getInput().addAction(new UserAction("MoveRight") {
             @Override
             protected void onActionBegin() {
-                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
                     gameScreen.getPlayerComponent().setMovingRight(true);
+                }
             }
+
             @Override
             protected void onActionEnd() {
-                if (gameScreen != null && gameScreen.getPlayerComponent() != null)
+                if (gameScreen != null && gameScreen.getPlayerComponent() != null) {
                     gameScreen.getPlayerComponent().setMovingRight(false);
+                }
             }
         }, KeyCode.D);
 
         getInput().addAction(new UserAction("MoveRightArrow") {
             @Override
             protected void onActionBegin() {
-                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
                     gameScreen.getPlayerComponent().setMovingRight(true);
+                }
             }
+
             @Override
             protected void onActionEnd() {
-                if (gameScreen != null && gameScreen.getPlayerComponent() != null)
+                if (gameScreen != null && gameScreen.getPlayerComponent() != null) {
                     gameScreen.getPlayerComponent().setMovingRight(false);
+                }
             }
         }, KeyCode.RIGHT);
 
         getInput().addAction(new UserAction("JumpW") {
             @Override
             protected void onActionBegin() {
-                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
                     gameScreen.getPlayerComponent().requestJump();
+                }
             }
         }, KeyCode.W);
 
         getInput().addAction(new UserAction("JumpUp") {
             @Override
             protected void onActionBegin() {
-                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
                     gameScreen.getPlayerComponent().requestJump();
+                }
             }
         }, KeyCode.UP);
 
         getInput().addAction(new UserAction("JumpSpace") {
             @Override
             protected void onActionBegin() {
-                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
                     gameScreen.getPlayerComponent().requestJump();
+                }
             }
         }, KeyCode.SPACE);
 
@@ -139,14 +155,16 @@ public class EdGameApplication extends GameApplication {
         getInput().addAction(new UserAction("UseWeapon") {
             @Override
             protected void onActionBegin() {
-                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
                     gameScreen.getPlayerComponent().startWeaponAction();
+                }
             }
 
             @Override
             protected void onActionEnd() {
-                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null)
+                if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
                     gameScreen.getPlayerComponent().releaseWeaponAction();
+                }
             }
         }, MouseButton.PRIMARY);
     }
@@ -165,30 +183,39 @@ public class EdGameApplication extends GameApplication {
     }
 
     private void showMenuScreen() {
-        menuScreen = new MenuScreen(
-                this::startGame,          // onStartCallback
-                this::exitGame,           // onExitCallback
-                this::showSettingsScreen  // onSettingsCallback
-        );
+        cleanupAllScreens();
+        currentState = GameState.MENU;
+        menuScreen = new MenuScreen(this::startGame, this::exitGame, this::showSettingsScreen);
         menuScreen.init();
     }
 
     private void showSettingsScreen() {
+        if (menuScreen != null) {
+            menuScreen.cleanup();
+            menuScreen = null;
+        }
         settingsScreen = new SettingsScreen(this::showMenuScreen);
         settingsScreen.init();
     }
 
     private void startGame() {
-        if (menuScreen != null) { menuScreen.cleanup(); menuScreen = null; }
+        cleanupAllScreens();
         currentState = GameState.PLAYING;
-        gameScreen = new GameScreen(this::restartGame, this::backToMenu, this::onGameOver);
+        gameScreen = new GameScreen(this::restartGame, this::backToMenu, this::onGameOver, this::onVictory);
         gameScreen.init();
     }
 
     private void restartGame() {
-        if (gameScreen != null) { gameScreen.cleanup(); gameScreen = null; }
+        if (gameScreen != null) {
+            gameScreen.cleanup();
+            gameScreen = null;
+        }
+        if (creditsScreen != null) {
+            creditsScreen.cleanup();
+            creditsScreen = null;
+        }
         currentState = GameState.PLAYING;
-        gameScreen = new GameScreen(this::restartGame, this::backToMenu, this::onGameOver);
+        gameScreen = new GameScreen(this::restartGame, this::backToMenu, this::onGameOver, this::onVictory);
         gameScreen.init();
     }
 
@@ -196,9 +223,19 @@ public class EdGameApplication extends GameApplication {
         currentState = GameState.GAME_OVER;
     }
 
+    private void onVictory() {
+        currentState = GameState.VICTORY;
+        if (gameScreen != null) {
+            gameScreen.cleanup();
+            gameScreen = null;
+        }
+        creditsScreen = new CreditsScreen(this::showMenuScreen);
+        creditsScreen.init();
+        currentState = GameState.CREDITS;
+    }
+
     private void backToMenu() {
-        if (pauseScreen != null) { pauseScreen.cleanup(); pauseScreen = null; }
-        if (gameScreen != null)  { gameScreen.cleanup();  gameScreen = null;  }
+        cleanupAllScreens();
         currentState = GameState.MENU;
         showMenuScreen();
     }
@@ -209,12 +246,38 @@ public class EdGameApplication extends GameApplication {
     }
 
     private void resumeGame() {
-        if (pauseScreen != null) { pauseScreen.cleanup(); pauseScreen = null; }
+        if (pauseScreen != null) {
+            pauseScreen.cleanup();
+            pauseScreen = null;
+        }
         currentState = GameState.PLAYING;
     }
 
     private void exitGame() {
         getGameController().exit();
+    }
+
+    private void cleanupAllScreens() {
+        if (menuScreen != null) {
+            menuScreen.cleanup();
+            menuScreen = null;
+        }
+        if (settingsScreen != null) {
+            settingsScreen.cleanup();
+            settingsScreen = null;
+        }
+        if (pauseScreen != null) {
+            pauseScreen.cleanup();
+            pauseScreen = null;
+        }
+        if (gameScreen != null) {
+            gameScreen.cleanup();
+            gameScreen = null;
+        }
+        if (creditsScreen != null) {
+            creditsScreen.cleanup();
+            creditsScreen = null;
+        }
     }
 
     public GameState getCurrentState() {
