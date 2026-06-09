@@ -46,6 +46,7 @@ public class GameScreen extends Screen {
     private static final double DAMAGE_TEXT_RISE_SPEED = 24.0;
     public static final String BOW = "Bow";
 
+    private Entity returnPortal;
     private Entity player;
     private Entity princess;
     private PlayerComponent playerComponent;
@@ -65,9 +66,11 @@ public class GameScreen extends Screen {
     private Label scoreLabel;
     private Label levelTitleLabel;
     private Label princessDialogLabel;
+    private Label objectiveLabel;
 
     private int score = 0;
     private boolean carryingChest = false;
+    private boolean returningToForest = false;
     private boolean playerDead = false;
     private boolean chestOpened = false;
     private LevelType currentLevel = LevelType.FOREST;
@@ -144,7 +147,13 @@ public class GameScreen extends Screen {
         princessDialogLabel.setAlignment(Pos.CENTER);
         princessDialogLabel.setMaxWidth(180);
 
-        hudRoot.getChildren().addAll(levelTitleLabel, hintLabel, healthBox, princessDialogLabel);
+        objectiveLabel = new Label("Find the stolen treasure");
+        objectiveLabel.setFont(AssetManager.getSmallFont());
+        objectiveLabel.setTextFill(UIStyle.TEXT_COLOR);
+        objectiveLabel.setPadding(new Insets(48, 0, 0, 0));
+        StackPane.setAlignment(objectiveLabel, Pos.TOP_CENTER);
+
+        hudRoot.getChildren().addAll(levelTitleLabel, hintLabel, healthBox, princessDialogLabel,objectiveLabel);
         getGameScene().addUINode(hudRoot);
     }
 
@@ -155,6 +164,7 @@ public class GameScreen extends Screen {
         chestOpened = false;
         playerDead = false;
         updateLevelTitle();
+        updateObjectiveLabel();
 
         background = createScrollingBackground(level == LevelType.FOREST ? AssetManager.MENU_BG : AssetManager.CAVE_BG);
         ground = (level == LevelType.FOREST ? EntityFactory.createGround() : EntityFactory.createCaveGround());
@@ -163,19 +173,33 @@ public class GameScreen extends Screen {
             spawnForestLayout();
             spawnForestEnemies();
             spawnForestPickups();
-            portal = EntityFactory.createPortal(GameConfig.WORLD_WIDTH - 130, GameConfig.GROUND_Y - GameConfig.PORTAL_SIZE);
+            if (!carryingChest) {
+                portal = EntityFactory.createPortal(GameConfig.WORLD_WIDTH - 130, GameConfig.GROUND_Y - GameConfig.PORTAL_SIZE);
+            }
+            princess = EntityFactory.createPrincess(
+                    GameConfig.PRINCESS_X,
+                    GameConfig.GROUND_Y - GameConfig.PLAYER_SIZE
+            );
         } else {
             spawnCaveLayout();
             spawnCaveEnemies();
             spawnCavePickups();
-            chest = EntityFactory.createChest(GameConfig.WORLD_WIDTH - 140, GameConfig.GROUND_Y - GameConfig.CHEST_HEIGHT, false);
+
+            returnPortal = EntityFactory.createPortal(40, GameConfig.GROUND_Y - GameConfig.PORTAL_SIZE);
+
+            if (!carryingChest) {
+                chest = EntityFactory.createChest(GameConfig.WORLD_WIDTH - 140, GameConfig.GROUND_Y - GameConfig.CHEST_HEIGHT, false);
+            }
         }
 
         if (firstLoad) {
             player.setX(GameConfig.PLAYER_START_X);
             player.setY(GameConfig.PLAYER_START_Y);
-        } else {
+        } else if (level == LevelType.CAVE) {
             player.setX(GameConfig.PLAYER_START_X);
+            player.setY(GameConfig.GROUND_Y - GameConfig.PLAYER_SIZE);
+        } else {
+            player.setX(GameConfig.WORLD_WIDTH - 180);
             player.setY(GameConfig.GROUND_Y - GameConfig.PLAYER_SIZE);
         }
     }
@@ -183,6 +207,22 @@ public class GameScreen extends Screen {
     private void updateLevelTitle() {
         if (levelTitleLabel != null) {
             levelTitleLabel.setText(currentLevel == LevelType.FOREST ? "Forest" : "Cave");
+        }
+    }
+
+    private void updateObjectiveLabel() {
+        if (objectiveLabel == null) {
+            return;
+        }
+
+        if (carryingChest) {
+            objectiveLabel.setText(currentLevel == LevelType.CAVE
+                    ? "Carry the treasure back through the cave"
+                    : "Bring the treasure back to the house");
+        } else {
+            objectiveLabel.setText(currentLevel == LevelType.CAVE
+                    ? "Find the treasure chest"
+                    : "Reach the cave and recover the treasure");
         }
     }
 
@@ -388,23 +428,39 @@ public class GameScreen extends Screen {
             return;
         }
 
-        if (currentLevel == LevelType.FOREST && portal != null && intersects(player, portal)) {
+        if (currentLevel == LevelType.FOREST && portal != null && !carryingChest && intersects(player, portal)) {
             removeEntity(portal);
             portal = null;
             loadLevel(LevelType.CAVE, false);
             return;
         }
 
+        if (currentLevel == LevelType.CAVE && returnPortal != null && carryingChest && intersects(player, returnPortal)) {
+            removeEntity(returnPortal);
+            returnPortal = null;
+            loadLevel(LevelType.FOREST, false);
+            return;
+        }
+
         if (currentLevel == LevelType.CAVE && chest != null && !chestOpened && intersects(player, chest)) {
             chestOpened = true;
+            carryingChest = true;
+
             double x = chest.getX();
             double y = chest.getY();
+
             removeEntity(chest);
             chest = EntityFactory.createChest(x, y, true);
 
+            updateObjectiveLabel();
+        }
+
+        if (currentLevel == LevelType.FOREST && carryingChest && player.getX() <= 120) {
+            carryingChest = false;
             if (onVictoryCallback != null) {
                 onVictoryCallback.run();
             }
+            return;
         }
 
         updatePrincessDialog();
@@ -427,7 +483,7 @@ public class GameScreen extends Screen {
 
         double talkRange = 120;
 
-        if (distance <= talkRange) {
+        if (distance <= talkRange && currentLevel == LevelType.FOREST) {
             princessDialogLabel.setVisible(true);
 
             if (!carryingChest) {
@@ -460,6 +516,7 @@ public class GameScreen extends Screen {
         removeEntity(background);
         removeEntity(portal);
         removeEntity(chest);
+        removeEntity(princess);
 
         for (Entity e : new ArrayList<>(platforms)) {
             removeEntity(e);
@@ -489,6 +546,7 @@ public class GameScreen extends Screen {
         pickups.clear();
         damageTexts.clear();
 
+        princess = null;
         player = null;
         playerComponent = null;
         ground = null;
@@ -504,6 +562,8 @@ public class GameScreen extends Screen {
         removeEntity(background);
         removeEntity(portal);
         removeEntity(chest);
+        removeEntity(returnPortal);
+        removeEntity(princess);
 
         for (Entity e : new ArrayList<>(platforms)) {
             removeEntity(e);
@@ -526,6 +586,8 @@ public class GameScreen extends Screen {
         enemies.clear();
         pickups.clear();
 
+        princess = null;
+        returnPortal = null;
         ground = null;
         background = null;
         portal = null;
