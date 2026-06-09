@@ -31,6 +31,9 @@ public class GameConfig {
     public static final double PLAYER_KNOCKBACK_X = 220;
     public static final double PLAYER_KNOCKBACK_Y = -260;
 
+    public static final double PRINCESS_X = 80;
+    public static final double PRINCESS_Y = GROUND_Y - PLAYER_SIZE;
+
     public static final int ENEMY_WIDTH = 44;
     public static final int ENEMY_HEIGHT = 46;
     public static final int ENEMY_MAX_HEALTH = 80;

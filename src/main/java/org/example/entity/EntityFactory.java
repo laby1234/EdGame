@@ -104,6 +104,18 @@ public class EntityFactory {
                 .buildAndAttach();
     }
 
+    public static Entity createPrincess(double x, double y) {
+        Texture princessTex = texture("sprites/princess.png",
+                GameConfig.PLAYER_SIZE, GameConfig.PLAYER_SIZE);
+
+        return entityBuilder()
+                .type(EntityType.NPC)
+                .at(x, y)
+                .view(princessTex)
+                .zIndex(50)
+                .buildAndAttach();
+    }
+
     public static Entity createPlatform(double x, double y, int widthInTiles) {
         double w = widthInTiles * GameConfig.TILE_SIZE;
         double h = GameConfig.TILE_SIZE;

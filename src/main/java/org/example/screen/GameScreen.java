@@ -47,6 +47,7 @@ public class GameScreen extends Screen {
     public static final String BOW = "Bow";
 
     private Entity player;
+    private Entity princess;
     private PlayerComponent playerComponent;
     private Entity ground;
     private Entity background;
@@ -63,8 +64,10 @@ public class GameScreen extends Screen {
     private Image weaponBowImage;
     private Label scoreLabel;
     private Label levelTitleLabel;
+    private Label princessDialogLabel;
 
     private int score = 0;
+    private boolean carryingChest = false;
     private boolean playerDead = false;
     private boolean chestOpened = false;
     private LevelType currentLevel = LevelType.FOREST;
@@ -98,6 +101,11 @@ public class GameScreen extends Screen {
         playerComponent.setOnHealthChanged(this::updatePlayerHealthHud);
         playerComponent.setOnWeaponChanged(this::updateWeaponHud);
 
+        princess = EntityFactory.createPrincess(
+                GameConfig.PRINCESS_X,
+                GameConfig.PRINCESS_Y
+        );
+
         loadLevel(LevelType.FOREST, true);
 
         getGameScene().getViewport().setBounds(0, 0, GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT);
@@ -126,7 +134,17 @@ public class GameScreen extends Screen {
         HBox healthBox = createPlayerHealthHud();
         StackPane.setAlignment(healthBox, Pos.TOP_LEFT);
 
-        hudRoot.getChildren().addAll(levelTitleLabel, hintLabel, healthBox);
+        princessDialogLabel = new Label("");
+        princessDialogLabel.setFont(AssetManager.getTextFont());
+        princessDialogLabel.setTextFill(UIStyle.TEXT_COLOR);
+        princessDialogLabel.setStyle("-fx-background-color: rgba(0,0,0,0.6); -fx-padding: 4 8 4 8; -fx-background-radius: 6;");
+        princessDialogLabel.setVisible(false);
+        princessDialogLabel.setWrapText(true);
+        princessDialogLabel.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
+        princessDialogLabel.setAlignment(Pos.CENTER);
+        princessDialogLabel.setMaxWidth(180);
+
+        hudRoot.getChildren().addAll(levelTitleLabel, hintLabel, healthBox, princessDialogLabel);
         getGameScene().addUINode(hudRoot);
     }
 
@@ -387,6 +405,48 @@ public class GameScreen extends Screen {
             if (onVictoryCallback != null) {
                 onVictoryCallback.run();
             }
+        }
+
+        updatePrincessDialog();
+    }
+
+    private void updatePrincessDialog() {
+        if (player == null || princess == null) {
+            return;
+        }
+
+        double playerCenterX = player.getX() + GameConfig.PLAYER_SIZE / 2.0;
+        double playerCenterY = player.getY() + GameConfig.PLAYER_SIZE / 2.0;
+
+        double princessCenterX = princess.getX() + GameConfig.PLAYER_SIZE / 2.0;
+        double princessCenterY = princess.getY() + GameConfig.PLAYER_SIZE / 2.0;
+
+        double dx = playerCenterX - princessCenterX;
+        double dy = playerCenterY - princessCenterY;
+        double distance = Math.hypot(dx, dy);
+
+        double talkRange = 120;
+
+        if (distance <= talkRange) {
+            princessDialogLabel.setVisible(true);
+
+            if (!carryingChest) {
+                princessDialogLabel.setText(
+                        "Please get back my treasure stolen by evil skeletons!"
+                );
+            } else {
+                princessDialogLabel.setText(
+                        "You managed to get it back! Thank you!"
+                );
+            }
+
+            double screenX = princessCenterX - getGameScene().getViewport().getX();
+            double screenY = princess.getY() - getGameScene().getViewport().getY() - 40;
+
+            princessDialogLabel.setTranslateX(screenX - GameConfig.WINDOW_WIDTH / 2.0);
+            princessDialogLabel.setTranslateY(screenY - GameConfig.WINDOW_HEIGHT / 2.0);
+        } else {
+            princessDialogLabel.setVisible(false);
         }
     }
 

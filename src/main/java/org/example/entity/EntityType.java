@@ -10,5 +10,6 @@ public enum EntityType {
     ENEMY_PROJECTILE,
     PICKUP,
     PORTAL,
-    CHEST
+    CHEST,
+    NPC
 }
