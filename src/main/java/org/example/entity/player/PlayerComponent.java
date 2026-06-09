@@ -51,11 +51,13 @@ public class PlayerComponent extends Component {
     private double flashTimer = 0;
     private boolean chargingBow = false;
     private Weapon activeWeapon = Weapon.SWORD;
+    private boolean carryingChest = false;
 
     private StackPane textureContainer;
     private Texture playerView;
     private final Texture swordView = createSwordView();
     private final Texture bowView = createBowView();
+    private final Texture chestCarryView = createChestCarryView();
 
     public void setTextureContainer(StackPane container) {
         this.textureContainer = container;
@@ -114,7 +116,7 @@ public class PlayerComponent extends Component {
     }
 
     public void switchWeaponByScroll(double deltaY) {
-        if (dead || deltaY == 0) {
+        if (dead || deltaY == 0 || carryingChest) {
             return;
         }
 
@@ -126,6 +128,10 @@ public class PlayerComponent extends Component {
     }
 
     public void startWeaponAction() {
+        if (dead || carryingChest) {
+            return;
+        }
+
         try {
             updateFacingFromMouse();
         } catch (RuntimeException e) {
@@ -140,6 +146,13 @@ public class PlayerComponent extends Component {
     }
 
     public void releaseWeaponAction() {
+        if (carryingChest) {
+            chargingBow = false;
+            bowChargeTime = 0;
+            updateBowView();
+            return;
+        }
+
         try {
             updateFacingFromMouse();
         } catch (RuntimeException e) {
@@ -243,6 +256,21 @@ public class PlayerComponent extends Component {
         notifyHealthChanged();
     }
 
+    public void setCarryingChest(boolean carryingChest) {
+        this.carryingChest = carryingChest;
+
+        if (carryingChest) {
+            chargingBow = false;
+            bowChargeTime = 0;
+            swordVisibleTimer = 0;
+        }
+
+        updateSwordView();
+        updateBowView();
+        updateChestCarryView();
+        notifyWeaponChanged();
+    }
+
     @Override
     public void onUpdate(double tpf) {
         if (dead) {
@@ -325,6 +353,7 @@ public class PlayerComponent extends Component {
         updateDamageFlash();
         updateSwordView();
         updateBowView();
+        updateChestCarryView();
     }
 
     private void checkPlatformCollisions(double dy) {
@@ -477,11 +506,20 @@ public class PlayerComponent extends Component {
 
     private void notifyWeaponChanged() {
         if (onWeaponChanged != null) {
-            onWeaponChanged.accept(activeWeapon == Weapon.SWORD ? "Sword" : "Bow");
+            if (carryingChest) {
+                onWeaponChanged.accept("Chest");
+            } else {
+                onWeaponChanged.accept(activeWeapon == Weapon.SWORD ? "Sword" : "Bow");
+            }
         }
     }
 
     private void updateSwordView() {
+        if (carryingChest) {
+            textureContainer.getChildren().remove(swordView);
+            return;
+        }
+
         if (textureContainer == null) {
             return;
         }
@@ -499,6 +537,11 @@ public class PlayerComponent extends Component {
     }
 
     private void updateBowView() {
+        if (carryingChest) {
+            textureContainer.getChildren().remove(bowView);
+            return;
+        }
+
         if (textureContainer == null) {
             return;
         }
@@ -515,12 +558,33 @@ public class PlayerComponent extends Component {
         bowView.setRotate(0);
     }
 
+    private void updateChestCarryView() {
+        if (textureContainer == null) {
+            return;
+        }
+
+        boolean shouldShow = carryingChest;
+
+        if (shouldShow && !textureContainer.getChildren().contains(chestCarryView)) {
+            textureContainer.getChildren().add(chestCarryView);
+        } else if (!shouldShow) {
+            textureContainer.getChildren().remove(chestCarryView);
+        }
+
+        chestCarryView.setTranslateX(0);
+        chestCarryView.setTranslateY(-28);
+        chestCarryView.setRotate(0);
+    }
+
     private static Texture createSwordView() {
         return texture("blocks/sword.png", 48, 16);
     }
 
     private static Texture createBowView() {
         return texture("blocks/bow.png", 16, 36);
+    }
+    private static Texture createChestCarryView() {
+        return texture("blocks/chest2.png", 34, 34);
     }
 
     private void updateFacingFromMouse() {

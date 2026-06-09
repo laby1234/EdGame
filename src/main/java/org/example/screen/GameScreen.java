@@ -45,7 +45,7 @@ public class GameScreen extends Screen {
     private static final double DAMAGE_TEXT_LIFETIME = 0.45;
     private static final double DAMAGE_TEXT_RISE_SPEED = 24.0;
     public static final String BOW = "Bow";
-
+    public static final String CHEST = "Chest";
     private Entity returnPortal;
     private Entity player;
     private Entity princess;
@@ -63,6 +63,7 @@ public class GameScreen extends Screen {
     private ImageView weaponIcon;
     private Image weaponSwordImage;
     private Image weaponBowImage;
+    private Image chestImage;
     private Label scoreLabel;
     private Label levelTitleLabel;
     private Label princessDialogLabel;
@@ -70,7 +71,6 @@ public class GameScreen extends Screen {
 
     private int score = 0;
     private boolean carryingChest = false;
-    private boolean returningToForest = false;
     private boolean playerDead = false;
     private boolean chestOpened = false;
     private LevelType currentLevel = LevelType.FOREST;
@@ -152,6 +152,7 @@ public class GameScreen extends Screen {
         objectiveLabel.setTextFill(UIStyle.TEXT_COLOR);
         objectiveLabel.setPadding(new Insets(48, 0, 0, 0));
         StackPane.setAlignment(objectiveLabel, Pos.TOP_CENTER);
+        objectiveLabel.setTranslateY(20);
 
         hudRoot.getChildren().addAll(levelTitleLabel, hintLabel, healthBox, princessDialogLabel,objectiveLabel);
         getGameScene().addUINode(hudRoot);
@@ -174,7 +175,7 @@ public class GameScreen extends Screen {
             spawnForestEnemies();
             spawnForestPickups();
             if (!carryingChest) {
-                portal = EntityFactory.createPortal(GameConfig.WORLD_WIDTH - 130, GameConfig.GROUND_Y - GameConfig.PORTAL_SIZE);
+                portal = EntityFactory.createPortal(GameConfig.WORLD_WIDTH - 230, GameConfig.GROUND_Y - GameConfig.PORTAL_SIZE);
             }
             princess = EntityFactory.createPrincess(
                     GameConfig.PRINCESS_X,
@@ -445,12 +446,13 @@ public class GameScreen extends Screen {
         if (currentLevel == LevelType.CAVE && chest != null && !chestOpened && intersects(player, chest)) {
             chestOpened = true;
             carryingChest = true;
+            playerComponent.setCarryingChest(true);
 
-            double x = chest.getX();
-            double y = chest.getY();
+            //double x = chest.getX();
+            //double y = chest.getY();
 
             removeEntity(chest);
-            chest = EntityFactory.createChest(x, y, true);
+            //chest = EntityFactory.createChest(x, y, true);
 
             updateObjectiveLabel();
         }
@@ -609,7 +611,7 @@ public class GameScreen extends Screen {
         Image weaponBg = AssetManager.loadImage(AssetManager.HUD_WEAPON);
         weaponSwordImage = AssetManager.loadImage("assets/textures/blocks/sword.png");
         weaponBowImage = AssetManager.loadImage("assets/textures/blocks/bow.png");
-
+        chestImage = AssetManager.loadImage("assets/textures/blocks/chest2.png");
         StackPane statusHud = new StackPane();
         if (statusBg != null) {
             ImageView statusView = new ImageView(statusBg);
@@ -722,7 +724,9 @@ public class GameScreen extends Screen {
 
         if (BOW.equalsIgnoreCase(weaponName)) {
             weaponIcon.setImage(weaponBowImage != null ? weaponBowImage : weaponIcon.getImage());
-        } else {
+        } else if (CHEST.equalsIgnoreCase(weaponName)) {
+            weaponIcon.setImage(chestImage != null ? chestImage : weaponIcon.getImage());
+        }else {
             weaponIcon.setImage(weaponSwordImage != null ? weaponSwordImage : weaponIcon.getImage());
         }
     }

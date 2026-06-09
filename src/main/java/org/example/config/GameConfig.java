@@ -61,7 +61,7 @@ public class GameConfig {
 
     public static final int TILE_SIZE = 40;
 
-    public static final double PORTAL_SIZE = 56;
+    public static final double PORTAL_SIZE = 200;
     public static final double CHEST_WIDTH = 52;
     public static final double CHEST_HEIGHT = 44;
 }

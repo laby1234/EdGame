@@ -300,14 +300,12 @@ public class EntityFactory {
     }
 
     public static Entity createPortal(double x, double y) {
-        Rectangle portal = new Rectangle(GameConfig.PORTAL_SIZE, GameConfig.PORTAL_SIZE, Color.BLACK);
-        portal.setStroke(Color.web("#5C5C5C"));
-        portal.setStrokeWidth(2);
+        Texture portalView = texture("blocks/cave.png", GameConfig.PORTAL_SIZE, GameConfig.PORTAL_SIZE);
 
         return entityBuilder()
                 .type(EntityType.PORTAL)
                 .at(x, y)
-                .view(portal)
+                .view(portalView)
                 .bbox(new HitBox(BoundingShape.box(GameConfig.PORTAL_SIZE, GameConfig.PORTAL_SIZE)))
                 .buildAndAttach();
     }
