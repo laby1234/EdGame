@@ -44,6 +44,10 @@ public class GameScreen extends Screen {
     private static final double HUD_SCALE = 0.4;
     private static final double DAMAGE_TEXT_LIFETIME = 0.45;
     private static final double DAMAGE_TEXT_RISE_SPEED = 24.0;
+    private static final double FLESH_WALL_SPEED = 105.0;
+    private static final double FLESH_WALL_WIDTH = 220.0;
+    private static final double FLESH_WALL_MARGIN = 40.0;
+
     public static final String BOW = "Bow";
     public static final String CHEST = "Chest";
     private Entity returnPortal;
@@ -54,6 +58,7 @@ public class GameScreen extends Screen {
     private Entity background;
     private Entity portal;
     private Entity chest;
+    private Entity fleshWall;
 
     private StackPane hudRoot;
     private StackPane deathOverlay;
@@ -86,7 +91,14 @@ public class GameScreen extends Screen {
     private final Runnable onGameOverCallback;
     private final Runnable onVictoryCallback;
 
-    public GameScreen(Runnable onRestartCallback, Runnable onMenuCallback, Runnable onGameOverCallback, Runnable onVictoryCallback) {
+    private boolean escapeSequenceStarted = false;
+    private final boolean useStartupDelay;
+    private boolean gameplayReady = false;
+    private double startupDelay = 5.5;
+    private StackPane startupOverlay;
+
+    public GameScreen(boolean useStartupDelay,Runnable onRestartCallback, Runnable onMenuCallback, Runnable onGameOverCallback, Runnable onVictoryCallback) {
+        this.useStartupDelay = useStartupDelay;
         this.onRestartCallback = onRestartCallback;
         this.onMenuCallback = onMenuCallback;
         this.onGameOverCallback = onGameOverCallback;
@@ -100,9 +112,11 @@ public class GameScreen extends Screen {
 
         player = EntityFactory.createPlayer();
         playerComponent = EntityFactory.getPlayerComponent(player);
+        playerComponent.resetInputState();
         playerComponent.setOnDeath(this::onPlayerDied);
         playerComponent.setOnHealthChanged(this::updatePlayerHealthHud);
         playerComponent.setOnWeaponChanged(this::updateWeaponHud);
+        playerComponent.setInputEnabled(false);
 
         princess = EntityFactory.createPrincess(
                 GameConfig.PRINCESS_X,
@@ -110,6 +124,15 @@ public class GameScreen extends Screen {
         );
 
         loadLevel(LevelType.FOREST, true);
+
+        if (useStartupDelay) {
+            gameplayReady = false;
+            startupDelay = 5.5;
+            showStartupOverlay();
+        } else {
+            gameplayReady = true;
+            playerComponent.setInputEnabled(true);
+        }
 
         getGameScene().getViewport().setBounds(0, 0, GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT);
         getGameScene().getViewport().bindToEntity(player, GameConfig.WINDOW_WIDTH / 2.0, GameConfig.WINDOW_HEIGHT / 2.0);
@@ -414,6 +437,17 @@ public class GameScreen extends Screen {
     public void update() {
         double dt = 1.0 / 60.0;
 
+        if (!gameplayReady) {
+            startupDelay -= dt;
+            if (startupDelay <= 0) {
+                gameplayReady = true;
+                playerComponent.setInputEnabled(true);
+                removeUINode(startupOverlay);
+                startupOverlay = null;
+            }
+            return;
+        }
+
         damageTexts.removeIf(entry -> {
             entry.timer -= dt;
             if (entry.timer <= 0) {
@@ -440,30 +474,48 @@ public class GameScreen extends Screen {
             removeEntity(returnPortal);
             returnPortal = null;
             loadLevel(LevelType.FOREST, false);
+
+            if (escapeSequenceStarted) {
+                spawnFleshWall();
+            }
             return;
         }
 
         if (currentLevel == LevelType.CAVE && chest != null && !chestOpened && intersects(player, chest)) {
             chestOpened = true;
             carryingChest = true;
+
             playerComponent.setCarryingChest(true);
-
-            //double x = chest.getX();
-            //double y = chest.getY();
-
             removeEntity(chest);
-            //chest = EntityFactory.createChest(x, y, true);
-
             updateObjectiveLabel();
+            startEscapeSequence();
         }
 
-        if (currentLevel == LevelType.FOREST && carryingChest && player.getX() <= 120) {
-            carryingChest = false;
-            if (onVictoryCallback != null) {
-                onVictoryCallback.run();
+        if (escapeSequenceStarted && fleshWall != null) {
+            fleshWall.translateX(-FLESH_WALL_SPEED * dt);
+
+            double wallFrontX = fleshWall.getX() + fleshWall.getWidth();
+            double playerBackX = player.getX() + GameConfig.PLAYER_SIZE - 6;
+
+            if (wallFrontX >= player.getX() + 6 && playerBackX >= fleshWall.getX()) {
+                playerComponent.killInstantly();
+                return;
             }
-            return;
+
+            if (currentLevel == LevelType.FOREST && carryingChest && player.getX() <= 120) {
+                carryingChest = false;
+                escapeSequenceStarted = false;
+                removeEntity(fleshWall);
+                fleshWall = null;
+                updateObjectiveLabel();
+
+                if (onVictoryCallback != null) {
+                    onVictoryCallback.run();
+                }
+                return;
+            }
         }
+
 
         updatePrincessDialog();
     }
@@ -519,6 +571,7 @@ public class GameScreen extends Screen {
         removeEntity(portal);
         removeEntity(chest);
         removeEntity(princess);
+        removeEntity(fleshWall);
 
         for (Entity e : new ArrayList<>(platforms)) {
             removeEntity(e);
@@ -548,6 +601,7 @@ public class GameScreen extends Screen {
         pickups.clear();
         damageTexts.clear();
 
+        fleshWall = null;
         princess = null;
         player = null;
         playerComponent = null;
@@ -566,6 +620,7 @@ public class GameScreen extends Screen {
         removeEntity(chest);
         removeEntity(returnPortal);
         removeEntity(princess);
+        removeEntity(fleshWall);
 
         for (Entity e : new ArrayList<>(platforms)) {
             removeEntity(e);
@@ -588,6 +643,7 @@ public class GameScreen extends Screen {
         enemies.clear();
         pickups.clear();
 
+        fleshWall = null;
         princess = null;
         returnPortal = null;
         ground = null;
@@ -798,10 +854,60 @@ public class GameScreen extends Screen {
         }
     }
 
+    private void showStartupOverlay() {
+        startupOverlay = new StackPane();
+        startupOverlay.setPrefWidth(GameConfig.WINDOW_WIDTH);
+        startupOverlay.setPrefHeight(GameConfig.WINDOW_HEIGHT);
+        startupOverlay.setStyle("-fx-background-color: rgba(0,0,0,0.55);");
+        startupOverlay.setPickOnBounds(true);
+
+        Label loadingLabel = new Label("Get Ready...");
+        loadingLabel.setFont(AssetManager.getTitleFont());
+        loadingLabel.setTextFill(UIStyle.TEXT_COLOR);
+        loadingLabel.setEffect(TITLE_SHADOW);
+
+        startupOverlay.getChildren().add(loadingLabel);
+        StackPane.setAlignment(loadingLabel, Pos.CENTER);
+
+        getGameScene().addUINode(startupOverlay);
+    }
+
     private void removeUINode(Node node) {
         if (node == null) {
             return;
         }
         getGameScene().removeUINode(node);
+    }
+
+    private void startEscapeSequence() {
+        if (escapeSequenceStarted) {
+            return;
+        }
+
+        escapeSequenceStarted = true;
+        spawnFleshWall();
+        updateObjectiveLabel();
+    }
+
+    private void spawnFleshWall() {
+        removeEntity(fleshWall);
+
+        double wallX = GameConfig.WORLD_WIDTH + FLESH_WALL_MARGIN;
+        double wallY = 0;
+        double wallHeight = GameConfig.WORLD_HEIGHT;
+
+        Image fleshWallImage = AssetManager.loadImage("assets/textures/sprites/fleshwall.png");
+
+        ImageView fleshWallView = new ImageView(fleshWallImage);
+        fleshWallView.setFitWidth(FLESH_WALL_WIDTH);
+        fleshWallView.setFitHeight(wallHeight);
+        fleshWallView.setPreserveRatio(false);
+        fleshWallView.setSmooth(false);
+
+        fleshWall = entityBuilder()
+                .at(wallX, wallY)
+                .type(EntityType.OBSTACLE)
+                .view(fleshWallView)
+                .buildAndAttach();
     }
 }

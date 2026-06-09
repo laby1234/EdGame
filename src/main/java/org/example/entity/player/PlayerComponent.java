@@ -52,6 +52,7 @@ public class PlayerComponent extends Component {
     private boolean chargingBow = false;
     private Weapon activeWeapon = Weapon.SWORD;
     private boolean carryingChest = false;
+    private boolean inputEnabled = true;
 
     private StackPane textureContainer;
     private Texture playerView;
@@ -82,14 +83,25 @@ public class PlayerComponent extends Component {
     }
 
     public void setMovingLeft(boolean moving) {
+        if (!inputEnabled) {
+            this.movingLeft = false;
+            return;
+        }
         this.movingLeft = moving;
     }
 
     public void setMovingRight(boolean moving) {
+        if (!inputEnabled) {
+            this.movingRight = false;
+            return;
+        }
         this.movingRight = moving;
     }
 
     public void requestJump() {
+        if (!inputEnabled) {
+            return;
+        }
         jumpReq = true;
     }
 
@@ -128,7 +140,7 @@ public class PlayerComponent extends Component {
     }
 
     public void startWeaponAction() {
-        if (dead || carryingChest) {
+        if (dead || carryingChest|| !inputEnabled) {
             return;
         }
 
@@ -146,6 +158,10 @@ public class PlayerComponent extends Component {
     }
 
     public void releaseWeaponAction() {
+        if (!inputEnabled) {
+            return;
+        }
+
         if (carryingChest) {
             chargingBow = false;
             bowChargeTime = 0;
@@ -604,5 +620,25 @@ public class PlayerComponent extends Component {
         }
 
         textureContainer.setOpacity(flashTimer > 0 ? 0.45 : 1.0);
+    }
+
+    public void setInputEnabled(boolean inputEnabled) {
+        this.inputEnabled = inputEnabled;
+    }
+
+    public void resetInputState() {
+        movingLeft = false;
+        movingRight = false;
+        jumpReq = false;
+        chargingBow = false;
+        bowChargeTime = 0;
+    }
+
+    public void killInstantly() {
+        if (dead) {
+            return;
+        }
+        health = 0;
+        die();
     }
 }

@@ -201,7 +201,7 @@ public class EdGameApplication extends GameApplication {
     private void startGame() {
         cleanupAllScreens();
         currentState = GameState.PLAYING;
-        gameScreen = new GameScreen(this::restartGame, this::backToMenu, this::onGameOver, this::onVictory);
+        gameScreen = new GameScreen(true,this::restartGame, this::backToMenu, this::onGameOver, this::onVictory);
         gameScreen.init();
     }
 
@@ -215,7 +215,7 @@ public class EdGameApplication extends GameApplication {
             creditsScreen = null;
         }
         currentState = GameState.PLAYING;
-        gameScreen = new GameScreen(this::restartGame, this::backToMenu, this::onGameOver, this::onVictory);
+        gameScreen = new GameScreen(false,this::restartGame, this::backToMenu, this::onGameOver, this::onVictory);
         gameScreen.init();
     }
 
