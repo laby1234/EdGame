@@ -5,10 +5,12 @@ import com.almasb.fxgl.entity.component.Component;
 import org.example.config.GameConfig;
 import org.example.entity.EntityType;
 import org.example.entity.player.PlayerComponent;
-
+import org.example.ui.AssetManager;
+import org.example.audio.AudioManager;
 import java.util.function.IntConsumer;
 
 import static com.almasb.fxgl.dsl.FXGL.getGameWorld;
+import static com.almasb.fxgl.dsl.FXGLForKtKt.play;
 
 public class PickupComponent extends Component {
 
@@ -40,6 +42,7 @@ public class PickupComponent extends Component {
 
     private void collect(PlayerComponent playerComponent) {
         if (type == PickupType.COIN) {
+            AudioManager.playSound(AssetManager.SFX_COIN);
             if (scoreCallback != null) {
                 scoreCallback.accept(GameConfig.COIN_SCORE);
             }

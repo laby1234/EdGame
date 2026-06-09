@@ -22,14 +22,17 @@ import org.example.entity.player.PlayerComponent;
 import org.example.ui.AssetManager;
 import org.example.ui.ProfessionalButton;
 import org.example.ui.UIStyle;
-
+import org.example.audio.AudioManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static com.almasb.fxgl.dsl.FXGL.getAudioPlayer;
+import static com.almasb.fxgl.dsl.FXGL.loopBGM;
 import static com.almasb.fxgl.dsl.FXGL.entityBuilder;
 import static com.almasb.fxgl.dsl.FXGL.getGameScene;
 import static com.almasb.fxgl.dsl.FXGL.getGameWorld;
+import static org.example.ui.AssetManager.MUSIC_ESCAPE;
 
 public class GameScreen extends Screen {
 
@@ -60,6 +63,7 @@ public class GameScreen extends Screen {
     private Entity chest;
     private Entity fleshWall;
 
+    private String currentMusicPath;
     private StackPane hudRoot;
     private StackPane deathOverlay;
     private Rectangle playerHealthFill;
@@ -185,6 +189,8 @@ public class GameScreen extends Screen {
         clearLevelEntities();
 
         currentLevel = level;
+        playLevelMusic();
+
         chestOpened = false;
         playerDead = false;
         updateLevelTitle();
@@ -504,6 +510,7 @@ public class GameScreen extends Screen {
 
             if (currentLevel == LevelType.FOREST && carryingChest && player.getX() <= 120) {
                 carryingChest = false;
+                getAudioPlayer().stopAllMusic();
                 escapeSequenceStarted = false;
                 removeEntity(fleshWall);
                 fleshWall = null;
@@ -562,6 +569,7 @@ public class GameScreen extends Screen {
 
     @Override
     public void cleanup() {
+        AudioManager.stopMusic();
         removeUINode(hudRoot);
         removeUINode(deathOverlay);
 
@@ -601,6 +609,7 @@ public class GameScreen extends Screen {
         pickups.clear();
         damageTexts.clear();
 
+        currentMusicPath = null;
         fleshWall = null;
         princess = null;
         player = null;
@@ -885,6 +894,7 @@ public class GameScreen extends Screen {
         }
 
         escapeSequenceStarted = true;
+        AudioManager.loopMusic(MUSIC_ESCAPE);
         spawnFleshWall();
         updateObjectiveLabel();
     }
@@ -909,5 +919,15 @@ public class GameScreen extends Screen {
                 .type(EntityType.OBSTACLE)
                 .view(fleshWallView)
                 .buildAndAttach();
+    }
+
+    private void playLevelMusic() {
+        if(!escapeSequenceStarted) {
+            String nextMusic = currentLevel == LevelType.FOREST
+                    ? AssetManager.MUSIC_FOREST
+                    : AssetManager.MUSIC_CAVE;
+
+            AudioManager.loopMusic(nextMusic);
+        }
     }
 }

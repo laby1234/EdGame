@@ -4,16 +4,19 @@ import com.almasb.fxgl.entity.Entity;
 import com.almasb.fxgl.entity.component.Component;
 import com.almasb.fxgl.texture.Texture;
 import javafx.scene.layout.StackPane;
+import org.example.audio.AudioManager;
 import org.example.config.GameConfig;
 import org.example.entity.EntityFactory;
 import org.example.entity.EntityType;
 import org.example.entity.enemy.EnemyComponent;
+import org.example.ui.AssetManager;
 import org.example.util.TimeUtil;
 
 import java.util.ArrayList;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
+import static com.almasb.fxgl.dsl.FXGL.play;
 import static com.almasb.fxgl.dsl.FXGL.getGameWorld;
 import static com.almasb.fxgl.dsl.FXGL.getInput;
 import static com.almasb.fxgl.dsl.FXGL.texture;
@@ -185,6 +188,7 @@ public class PlayerComponent extends Component {
             return;
         }
 
+        AudioManager.playSound(AssetManager.SFX_SWORD_HIT);
         swordCooldown = GameConfig.SWORD_COOLDOWN;
         swordVisibleTimer = 0.12;
         updateSwordView();
@@ -220,6 +224,7 @@ public class PlayerComponent extends Component {
             return;
         }
 
+        AudioManager.playSound(AssetManager.SFX_BOW_SHOOT);
         chargingBow = false;
         arrowCooldown = GameConfig.ARROW_COOLDOWN;
         updateBowView();
@@ -251,6 +256,7 @@ public class PlayerComponent extends Component {
             return;
         }
 
+        AudioManager.playSound(AssetManager.SFX_HURT);
         health = Math.max(0, health - damage);
         damageCooldown = GameConfig.PLAYER_DAMAGE_COOLDOWN;
         knockbackVelocityX = (hitDirection < 0 ? -1 : 1) * GameConfig.PLAYER_KNOCKBACK_X;

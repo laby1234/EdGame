@@ -9,12 +9,14 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import org.example.audio.AudioManager;
 import org.example.config.GameConfig;
 import org.example.ui.AssetManager;
 import org.example.ui.ProfessionalButton;
 import org.example.ui.UIStyle;
 
 import static com.almasb.fxgl.dsl.FXGL.getGameScene;
+import static com.almasb.fxgl.dsl.FXGLForKtKt.play;
 
 public class CreditsScreen extends Screen {
 
@@ -34,7 +36,7 @@ public class CreditsScreen extends Screen {
         rootPane.setPrefWidth(GameConfig.WINDOW_WIDTH);
         rootPane.setPrefHeight(GameConfig.WINDOW_HEIGHT);
         rootPane.setStyle("-fx-background-color: rgba(0, 0, 0, 0.68);");
-
+        AudioManager.playSound(AssetManager.SFX_VICTORY);
         Image bgImage = AssetManager.loadImage(AssetManager.CAVE_BG);
         if (bgImage != null) {
             ImageView bgView = new ImageView(bgImage);

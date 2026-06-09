@@ -23,13 +23,18 @@ public class AssetManager {
     public static final String BTN_HOVER = UI_PATH + "buttons/btn_hover.png";
     public static final String BTN_PRESSED = UI_PATH + "buttons/btn_pressed.png";
 
-    public static final String ICON_SOUND_ON = UI_PATH + "icons/sound_on.png";
-    public static final String ICON_SOUND_OFF = UI_PATH + "icons/sound_off.png";
-    public static final String ICON_MUSIC_ON = UI_PATH + "icons/music_on.png";
-    public static final String ICON_MUSIC_OFF = UI_PATH + "icons/music_off.png";
-
     public static final String CHEST_CLOSED = TEXTURES_PATH + "blocks/chest1.png";
     public static final String CHEST_OPEN = TEXTURES_PATH + "blocks/chest2.png";
+
+    public static final String SFX_BOW_SHOOT ="bow_shoot.wav";
+    public static final String SFX_COIN ="coin.wav";
+    public static final String SFX_HURT ="hurt.wav";
+    public static final String SFX_SWORD_HIT ="sword_hit.wav";
+    public static final String SFX_VICTORY = "victory.wav";
+
+    public static final String MUSIC_FOREST ="forest_sound.wav";
+    public static final String MUSIC_CAVE ="cave_sound.wav";
+    public static final String MUSIC_ESCAPE = "escape_music.wav";
 
     public static final double TITLE_SIZE = 48;
     public static final double HEADING_SIZE = 32;
