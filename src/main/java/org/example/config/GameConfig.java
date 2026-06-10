@@ -20,6 +20,7 @@ public class GameConfig {
     public static final double PLAYER_JUMP_STRENGTH = -720;
     public static final int PLAYER_MAX_HEALTH = 100;
     public static final int PLAYER_CONTACT_DAMAGE = 15;
+    public static final int SPIKE_DAMAGE = 50;
     public static final double PLAYER_DAMAGE_COOLDOWN = 0.8;
     public static final int SWORD_DAMAGE = 35;
     public static final double SWORD_RANGE = 75;
@@ -56,6 +57,8 @@ public class GameConfig {
     public static final int ENEMY_SCORE = 50;
     public static final int CAVE_ENEMY_SCORE = 90;
     public static final int HEART_HEAL = 25;
+    public static final int SCORE_HEAL_COST = 30;
+    public static final int SCORE_HEAL_AMOUNT = 30;
     public static final int PICKUP_SIZE = 24;
     public static final double HEART_DROP_CHANCE = 0.35;
 

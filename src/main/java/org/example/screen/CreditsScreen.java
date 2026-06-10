@@ -3,6 +3,7 @@ package org.example.screen;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -11,12 +12,15 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import org.example.audio.AudioManager;
 import org.example.config.GameConfig;
+import org.example.leaderboard.LeaderboardEntry;
+import org.example.leaderboard.LeaderboardStore;
 import org.example.ui.AssetManager;
 import org.example.ui.ProfessionalButton;
 import org.example.ui.UIStyle;
 
+import java.util.List;
+
 import static com.almasb.fxgl.dsl.FXGL.getGameScene;
-import static com.almasb.fxgl.dsl.FXGLForKtKt.play;
 
 public class CreditsScreen extends Screen {
 
@@ -24,10 +28,17 @@ public class CreditsScreen extends Screen {
     private static final DropShadow TEXT_SHADOW = createShadow(1, 1, 2, Color.web("#1C0F08"));
 
     private final Runnable onBackToMenu;
+    private final int finalScore;
+    private final double finalTime;
     private StackPane rootPane;
+    private VBox leaderboardBox;
+    private TextField nameField;
+    private ProfessionalButton saveBtn;
 
-    public CreditsScreen(Runnable onBackToMenu) {
+    public CreditsScreen(Runnable onBackToMenu, int finalScore, double finalTime) {
         this.onBackToMenu = onBackToMenu;
+        this.finalScore = finalScore;
+        this.finalTime = finalTime;
     }
 
     @Override
@@ -54,10 +65,10 @@ public class CreditsScreen extends Screen {
         overlay.setPrefHeight(GameConfig.WINDOW_HEIGHT);
         overlay.setStyle("-fx-background-color: rgba(0, 0, 0, 0.55);");
 
-        VBox content = new VBox(18);
+        VBox content = new VBox(10);
         content.setAlignment(Pos.CENTER);
-        content.setPadding(new Insets(40));
-        content.setMaxWidth(520);
+        content.setPadding(new Insets(24));
+        content.setMaxWidth(640);
         content.setStyle(
                 "-fx-background-color: rgba(20, 12, 8, 0.72);" +
                         "-fx-background-radius: 12;" +
@@ -76,6 +87,30 @@ public class CreditsScreen extends Screen {
         line1.setTextFill(UIStyle.TEXT_COLOR);
         line1.setEffect(TEXT_SHADOW);
 
+        Label resultLabel = new Label("Score: " + finalScore + "   Time: " + new LeaderboardEntry("", finalScore, finalTime).formattedTime());
+        resultLabel.setFont(AssetManager.getTextFont());
+        resultLabel.setTextFill(UIStyle.ACCENT_COLOR);
+        resultLabel.setEffect(TEXT_SHADOW);
+
+        nameField = new TextField();
+        nameField.setPromptText("Nickname");
+        nameField.setMaxWidth(280);
+        nameField.setFont(AssetManager.getSmallFont());
+        nameField.setStyle(
+                "-fx-background-color: rgba(255,255,255,0.9);" +
+                        "-fx-text-fill: #1C0F08;" +
+                        "-fx-prompt-text-fill: #6B5A43;"
+        );
+
+        saveBtn = new ProfessionalButton("SAVE SCORE");
+        saveBtn.setMinSize(220, 44);
+        saveBtn.setOnAction(e -> saveScore());
+
+        leaderboardBox = new VBox(6);
+        leaderboardBox.setAlignment(Pos.CENTER_LEFT);
+        leaderboardBox.setMaxWidth(500);
+        renderLeaderboard(LeaderboardStore.loadTopEntries());
+
         Label line2 = new Label("Game by: Michal Janus, Tomasz Jachowicz");
         line2.setFont(AssetManager.getTextFont());
         line2.setTextFill(UIStyle.TEXT_COLOR);
@@ -87,7 +122,7 @@ public class CreditsScreen extends Screen {
         line3.setEffect(TEXT_SHADOW);
 
         ProfessionalButton menuBtn = new ProfessionalButton("MENU");
-        menuBtn.setMinSize(280, 58);
+        menuBtn.setMinSize(240, 48);
         menuBtn.setOnAction(e -> {
             if (onBackToMenu != null) {
                 cleanup();
@@ -95,7 +130,7 @@ public class CreditsScreen extends Screen {
             }
         });
 
-        content.getChildren().addAll(title, line1, line2, line3, menuBtn);
+        content.getChildren().addAll(title, line1, resultLabel, nameField, saveBtn, leaderboardBox, line2, line3, menuBtn);
         overlay.getChildren().add(content);
         rootPane.getChildren().add(overlay);
 
@@ -111,6 +146,55 @@ public class CreditsScreen extends Screen {
         if (rootPane != null) {
             getGameScene().removeUINode(rootPane);
         }
+    }
+
+    private void saveScore() {
+        String name = LeaderboardStore.sanitizeName(nameField.getText());
+        List<LeaderboardEntry> entries = LeaderboardStore.addEntry(new LeaderboardEntry(name, finalScore, finalTime));
+        renderLeaderboard(entries);
+        nameField.setText(name);
+        nameField.setDisable(true);
+        saveBtn.setEnabled(false);
+    }
+
+    private void renderLeaderboard(List<LeaderboardEntry> entries) {
+        if (leaderboardBox == null) {
+            return;
+        }
+
+        leaderboardBox.getChildren().clear();
+
+        Label header = new Label("TOP 10");
+        header.setFont(AssetManager.getHeadingFont());
+        header.setTextFill(UIStyle.ACCENT_COLOR);
+        header.setEffect(TEXT_SHADOW);
+        leaderboardBox.getChildren().add(header);
+
+        if (entries.isEmpty()) {
+            Label empty = createLeaderboardLabel("No scores yet.");
+            leaderboardBox.getChildren().add(empty);
+            return;
+        }
+
+        for (int i = 0; i < entries.size(); i++) {
+            LeaderboardEntry entry = entries.get(i);
+            String row = String.format(
+                    "%2d. %-16s %5d pts  %s",
+                    i + 1,
+                    entry.name(),
+                    entry.score(),
+                    entry.formattedTime()
+            );
+            leaderboardBox.getChildren().add(createLeaderboardLabel(row));
+        }
+    }
+
+    private Label createLeaderboardLabel(String text) {
+        Label label = new Label(text);
+        label.setFont(AssetManager.getSmallFont());
+        label.setTextFill(UIStyle.TEXT_COLOR);
+        label.setEffect(TEXT_SHADOW);
+        return label;
     }
 
     private static DropShadow createShadow(double offsetX, double offsetY, double radius, Color color) {

@@ -13,16 +13,19 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import org.example.audio.AudioManager;
+import org.example.audio.AudioSettings;
 import org.example.config.GameConfig;
 import org.example.ui.AssetManager;
 import org.example.ui.ProfessionalButton;
 import org.example.ui.UIStyle;
 
+import java.util.function.DoubleConsumer;
+
 import static com.almasb.fxgl.dsl.FXGL.getGameScene;
 
 public class PauseScreen extends Screen {
 
-    private static final double DEFAULT_VOLUME = 0.7;
     private static final DropShadow TITLE_SHADOW = createShadow(3, 3, 4, Color.web("#1C0F08"));
     private static final DropShadow TEXT_SHADOW = createShadow(1, 1, 2, Color.web("#1C0F08"));
 
@@ -179,11 +182,22 @@ public class PauseScreen extends Screen {
         Label sectionTitle = new Label("🔊 AUDIO SETTINGS");
         styleSectionLabel(sectionTitle);
 
-        HBox masterVolumeBox = createVolumeControl("Master Volume");
-        section.getChildren().addAll(sectionTitle, masterVolumeBox);
+        HBox soundVolumeBox = createVolumeControl(
+                "Sound Volume",
+                AudioSettings.getSoundVolume(),
+                AudioSettings::setSoundVolume
+        );
 
-        HBox musicVolumeBox = createVolumeControl("Music Volume");
-        section.getChildren().add(musicVolumeBox);
+        HBox musicVolumeBox = createVolumeControl(
+                "Music Volume",
+                AudioSettings.getMusicVolume(),
+                value -> {
+                    AudioSettings.setMusicVolume(value);
+                    AudioManager.refreshMusicVolume();
+                }
+        );
+
+        section.getChildren().addAll(sectionTitle, soundVolumeBox, musicVolumeBox);
 
         return section;
     }
@@ -207,7 +221,7 @@ public class PauseScreen extends Screen {
         return section;
     }
 
-    private HBox createVolumeControl(String label) {
+    private HBox createVolumeControl(String label, double initialValue, DoubleConsumer onChange) {
         HBox box = new HBox(15);
         box.setAlignment(Pos.CENTER_LEFT);
 
@@ -215,17 +229,21 @@ public class PauseScreen extends Screen {
         styleSmallLabel(labelControl);
         labelControl.setMinWidth(150);
 
-        Slider slider = new Slider(0, 1, DEFAULT_VOLUME);
+        Slider slider = new Slider(0, 1, initialValue);
         slider.setStyle(UIStyle.SLIDER_STYLE);
         slider.setPrefWidth(250);
         slider.setShowTickLabels(false);
         slider.setShowTickMarks(false);
 
-        Label valueLabel = new Label(String.format("%.0f%%", DEFAULT_VOLUME * 100));
+        Label valueLabel = new Label(String.format("%.0f%%", initialValue * 100));
         styleSmallLabel(valueLabel);
         valueLabel.setMinWidth(50);
 
-        slider.valueProperty().addListener((obs, oldVal, newVal) -> valueLabel.setText(String.format("%.0f%%", newVal.doubleValue() * 100)));
+        slider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            double value = newVal.doubleValue();
+            valueLabel.setText(String.format("%.0f%%", value * 100));
+            onChange.accept(value);
+        });
 
         box.getChildren().addAll(labelControl, slider, valueLabel);
 

@@ -146,6 +146,15 @@ public class EdGameApplication extends GameApplication {
             }
         }, KeyCode.SPACE);
 
+        getInput().addAction(new UserAction("ScoreHeal") {
+            @Override
+            protected void onActionBegin() {
+                if (currentState == GameState.PLAYING && gameScreen != null) {
+                    gameScreen.tryBuyHeal();
+                }
+            }
+        }, KeyCode.E);
+
         getInput().addEventHandler(ScrollEvent.SCROLL, event -> {
             if (currentState == GameState.PLAYING && gameScreen != null && gameScreen.getPlayerComponent() != null) {
                 gameScreen.getPlayerComponent().switchWeaponByScroll(event.getDeltaY());
@@ -178,7 +187,7 @@ public class EdGameApplication extends GameApplication {
     @Override
     protected void onUpdate(double tpf) {
         if (currentState == GameState.PLAYING && gameScreen != null) {
-            gameScreen.update();
+            gameScreen.update(tpf);
         }
     }
 
@@ -225,11 +234,16 @@ public class EdGameApplication extends GameApplication {
 
     private void onVictory() {
         currentState = GameState.VICTORY;
+        int finalScore = 0;
+        double finalTime = 0;
+
         if (gameScreen != null) {
+            finalScore = gameScreen.getScore();
+            finalTime = gameScreen.getElapsedTime();
             gameScreen.cleanup();
             gameScreen = null;
         }
-        creditsScreen = new CreditsScreen(this::showMenuScreen);
+        creditsScreen = new CreditsScreen(this::showMenuScreen, finalScore, finalTime);
         creditsScreen.init();
         currentState = GameState.CREDITS;
     }

@@ -353,8 +353,9 @@ public class PlayerComponent extends Component {
             return;
         }
 
-        if (checkObstacleCollision()) {
-            die();
+        double obstacleHitDirection = getObstacleHitDirection();
+        if (!Double.isNaN(obstacleHitDirection)) {
+            takeDamage(GameConfig.SPIKE_DAMAGE, obstacleHitDirection);
             return;
         }
 
@@ -400,7 +401,7 @@ public class PlayerComponent extends Component {
         }
     }
 
-    private boolean checkObstacleCollision() {
+    private double getObstacleHitDirection() {
         for (Entity obstacle : getGameWorld().getEntitiesByType(EntityType.OBSTACLE)) {
             double oLeft = obstacle.getX();
             double oRight = oLeft + obstacle.getWidth();
@@ -413,10 +414,12 @@ public class PlayerComponent extends Component {
             double eBottom = entity.getY() + GameConfig.PLAYER_SIZE - 4;
 
             if (eRight > oLeft && eLeft < oRight && eBottom > oTop && eTop < oBottom) {
-                return true;
+                double playerCenterX = entity.getX() + GameConfig.PLAYER_SIZE / 2.0;
+                double obstacleCenterX = obstacle.getX() + obstacle.getWidth() / 2.0;
+                return playerCenterX < obstacleCenterX ? -1 : 1;
             }
         }
-        return false;
+        return Double.NaN;
     }
 
     private void die() {

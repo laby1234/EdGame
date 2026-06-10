@@ -77,8 +77,10 @@ public class GameScreen extends Screen {
     private Label levelTitleLabel;
     private Label princessDialogLabel;
     private Label objectiveLabel;
+    private Label feedbackLabel;
 
     private int score = 0;
+    private double elapsedTime = 0;
     private boolean carryingChest = false;
     private boolean playerDead = false;
     private boolean chestOpened = false;
@@ -100,6 +102,9 @@ public class GameScreen extends Screen {
     private boolean gameplayReady = false;
     private double startupDelay = 5.5;
     private StackPane startupOverlay;
+    private double feedbackTimer = 0;
+    private StackPane runOverlay;
+    private double runOverlayTimer = 0;
 
     public GameScreen(boolean useStartupDelay,Runnable onRestartCallback, Runnable onMenuCallback, Runnable onGameOverCallback, Runnable onVictoryCallback) {
         this.useStartupDelay = useStartupDelay;
@@ -112,6 +117,8 @@ public class GameScreen extends Screen {
     @Override
     public void init() {
         getGameScene().setBackgroundColor(Color.WHITE);
+        elapsedTime = 0;
+        feedbackTimer = 0;
         createHud();
 
         player = EntityFactory.createPlayer();
@@ -155,7 +162,7 @@ public class GameScreen extends Screen {
         levelTitleLabel.setPadding(new Insets(14, 0, 0, 0));
         StackPane.setAlignment(levelTitleLabel, Pos.TOP_CENTER);
 
-        Label hintLabel = new Label("LMB - use | Scroll - weapon | R - restart");
+        Label hintLabel = new Label("LMB - use | Scroll - weapon | E - heal 30pts | R - restart");
         hintLabel.setFont(AssetManager.getSmallFont());
         hintLabel.setTextFill(UIStyle.TEXT_COLOR);
         hintLabel.setPadding(new Insets(16, 14, 0, 0));
@@ -181,7 +188,15 @@ public class GameScreen extends Screen {
         StackPane.setAlignment(objectiveLabel, Pos.TOP_CENTER);
         objectiveLabel.setTranslateY(20);
 
-        hudRoot.getChildren().addAll(levelTitleLabel, hintLabel, healthBox, princessDialogLabel,objectiveLabel);
+        feedbackLabel = new Label("");
+        feedbackLabel.setFont(AssetManager.getSmallFont());
+        feedbackLabel.setTextFill(UIStyle.ACCENT_COLOR);
+        feedbackLabel.setEffect(TITLE_SHADOW);
+        feedbackLabel.setVisible(false);
+        feedbackLabel.setPadding(new Insets(92, 0, 0, 0));
+        StackPane.setAlignment(feedbackLabel, Pos.TOP_CENTER);
+
+        hudRoot.getChildren().addAll(levelTitleLabel, hintLabel, healthBox, princessDialogLabel, objectiveLabel, feedbackLabel);
         getGameScene().addUINode(hudRoot);
     }
 
@@ -201,7 +216,9 @@ public class GameScreen extends Screen {
 
         if (level == LevelType.FOREST) {
             spawnForestLayout();
-            spawnForestEnemies();
+            if (!escapeSequenceStarted) {
+                spawnForestEnemies();
+            }
             spawnForestPickups();
             if (!carryingChest) {
                 portal = EntityFactory.createPortal(GameConfig.WORLD_WIDTH - 230, GameConfig.GROUND_Y - GameConfig.PORTAL_SIZE);
@@ -212,7 +229,9 @@ public class GameScreen extends Screen {
             );
         } else {
             spawnCaveLayout();
-            spawnCaveEnemies();
+            if (!escapeSequenceStarted) {
+                spawnCaveEnemies();
+            }
             spawnCavePickups();
 
             returnPortal = EntityFactory.createPortal(40, GameConfig.GROUND_Y - GameConfig.PORTAL_SIZE);
@@ -220,6 +239,10 @@ public class GameScreen extends Screen {
             if (!carryingChest) {
                 chest = EntityFactory.createChest(GameConfig.WORLD_WIDTH - 140, GameConfig.GROUND_Y - GameConfig.CHEST_HEIGHT, false);
             }
+        }
+
+        if (escapeSequenceStarted) {
+            spawnEscapeRoute(level);
         }
 
         if (firstLoad) {
@@ -289,7 +312,7 @@ public class GameScreen extends Screen {
         platforms.add(EntityFactory.createStonePlatform(1940, 330, 3));
         platforms.add(EntityFactory.createStonePlatform(2280, 430, 4));
         platforms.add(EntityFactory.createStonePlatform(2660, 360, 5));
-        platforms.add(EntityFactory.createStonePlatform(3160, 300, 3));
+        platforms.add(EntityFactory.createStonePlatform(3040, 300, 3));
 
         int groundObstacleY = GameConfig.GROUND_Y - GameConfig.TILE_SIZE;
         obstacles.add(EntityFactory.createObstacle(520, groundObstacleY));
@@ -300,6 +323,25 @@ public class GameScreen extends Screen {
 
         obstacles.add(EntityFactory.createObstacle(1230, 340 - GameConfig.TILE_SIZE));
         obstacles.add(EntityFactory.createObstacle(2310, 430 - GameConfig.TILE_SIZE));
+    }
+
+    private void spawnEscapeRoute(LevelType level) {
+        if (level == LevelType.FOREST) {
+            platforms.add(EntityFactory.createPlatform(3140, 500, 3));
+            platforms.add(EntityFactory.createPlatform(2720, 500, 3));
+            platforms.add(EntityFactory.createPlatform(2160, 500, 3));
+            platforms.add(EntityFactory.createPlatform(1600, 500, 3));
+            platforms.add(EntityFactory.createPlatform(1240, 500, 3));
+            platforms.add(EntityFactory.createPlatform(740, 500, 3));
+            platforms.add(EntityFactory.createPlatform(210, 500, 3));
+        } else {
+            platforms.add(EntityFactory.createStonePlatform(3340, 470, 3));
+            platforms.add(EntityFactory.createStonePlatform(2860, 440, 3));
+            platforms.add(EntityFactory.createStonePlatform(2460, 500, 3));
+            platforms.add(EntityFactory.createStonePlatform(2060, 490, 3));
+            platforms.add(EntityFactory.createStonePlatform(1420, 500, 3));
+            platforms.add(EntityFactory.createStonePlatform(900, 500, 3));
+        }
     }
 
     private void spawnForestEnemies() {
@@ -340,12 +382,12 @@ public class GameScreen extends Screen {
     private void spawnCavePickups() {
         pickups.add(EntityFactory.createCoin(470, 460, this::addScore));
         pickups.add(EntityFactory.createCoin(860, 380, this::addScore));
-        pickups.add(EntityFactory.createCoin(1210, 300, this::addScore));
+        pickups.add(EntityFactory.createCoin(1280, 300, this::addScore));
         pickups.add(EntityFactory.createCoin(1600, 380, this::addScore));
         pickups.add(EntityFactory.createCoin(1950, 290, this::addScore));
-        pickups.add(EntityFactory.createCoin(2330, 390, this::addScore));
+        pickups.add(EntityFactory.createCoin(2370, 390, this::addScore));
         pickups.add(EntityFactory.createCoin(2700, 320, this::addScore));
-        pickups.add(EntityFactory.createCoin(3180, 260, this::addScore));
+        pickups.add(EntityFactory.createCoin(3080, 260, this::addScore));
     }
 
     private void tryDropHeart(double x, double y) {
@@ -441,10 +483,15 @@ public class GameScreen extends Screen {
 
     @Override
     public void update() {
+        update(1.0 / 60.0);
+    }
+
+    public void update(double tpf) {
         double dt = 1.0 / 60.0;
+        double timeDt = normalizeTimeDelta(tpf);
 
         if (!gameplayReady) {
-            startupDelay -= dt;
+            startupDelay -= timeDt;
             if (startupDelay <= 0) {
                 gameplayReady = true;
                 playerComponent.setInputEnabled(true);
@@ -464,6 +511,18 @@ public class GameScreen extends Screen {
             entry.entity.getViewComponent().setOpacity(Math.min(1.0, entry.timer / DAMAGE_TEXT_LIFETIME));
             return false;
         });
+
+        feedbackTimer = Math.max(0, feedbackTimer - dt);
+        if (feedbackLabel != null && feedbackTimer == 0) {
+            feedbackLabel.setVisible(false);
+        }
+
+        if (runOverlay != null) {
+            updateRunOverlay(timeDt);
+            return;
+        }
+
+        elapsedTime += timeDt;
 
         if (player == null || playerComponent == null || playerComponent.isDead()) {
             return;
@@ -527,24 +586,20 @@ public class GameScreen extends Screen {
         updatePrincessDialog();
     }
 
+    private double normalizeTimeDelta(double tpf) {
+        if (tpf <= 0 || Double.isNaN(tpf) || Double.isInfinite(tpf)) {
+            return 1.0 / 60.0;
+        }
+
+        return Math.min(tpf, 0.25);
+    }
+
     private void updatePrincessDialog() {
         if (player == null || princess == null) {
             return;
         }
 
-        double playerCenterX = player.getX() + GameConfig.PLAYER_SIZE / 2.0;
-        double playerCenterY = player.getY() + GameConfig.PLAYER_SIZE / 2.0;
-
-        double princessCenterX = princess.getX() + GameConfig.PLAYER_SIZE / 2.0;
-        double princessCenterY = princess.getY() + GameConfig.PLAYER_SIZE / 2.0;
-
-        double dx = playerCenterX - princessCenterX;
-        double dy = playerCenterY - princessCenterY;
-        double distance = Math.hypot(dx, dy);
-
-        double talkRange = 120;
-
-        if (distance <= talkRange && currentLevel == LevelType.FOREST) {
+        if (isPlayerNearPrincess() && currentLevel == LevelType.FOREST) {
             princessDialogLabel.setVisible(true);
 
             if (!carryingChest) {
@@ -557,6 +612,7 @@ public class GameScreen extends Screen {
                 );
             }
 
+            double princessCenterX = princess.getX() + GameConfig.PLAYER_SIZE / 2.0;
             double screenX = princessCenterX - getGameScene().getViewport().getX();
             double screenY = princess.getY() - getGameScene().getViewport().getY() - 40;
 
@@ -567,11 +623,53 @@ public class GameScreen extends Screen {
         }
     }
 
+    public void tryBuyHeal() {
+        if (playerComponent == null || playerComponent.isDead()) {
+            return;
+        }
+
+        if (playerComponent.getHealth() >= GameConfig.PLAYER_MAX_HEALTH) {
+            showFeedback("HP is already full.");
+            return;
+        }
+
+        if (score < GameConfig.SCORE_HEAL_COST) {
+            showFeedback("Need " + GameConfig.SCORE_HEAL_COST + " pts for healing.");
+            return;
+        }
+
+        addScore(-GameConfig.SCORE_HEAL_COST);
+        playerComponent.heal(GameConfig.SCORE_HEAL_AMOUNT);
+        showFeedback("Healed +" + GameConfig.SCORE_HEAL_AMOUNT + " HP.");
+    }
+
+    private boolean isPlayerNearPrincess() {
+        if (player == null || princess == null) {
+            return false;
+        }
+
+        double playerCenterX = player.getX() + GameConfig.PLAYER_SIZE / 2.0;
+        double playerCenterY = player.getY() + GameConfig.PLAYER_SIZE / 2.0;
+        double princessCenterX = princess.getX() + GameConfig.PLAYER_SIZE / 2.0;
+        double princessCenterY = princess.getY() + GameConfig.PLAYER_SIZE / 2.0;
+
+        return Math.hypot(playerCenterX - princessCenterX, playerCenterY - princessCenterY) <= 120;
+    }
+
+    private void showFeedback(String message) {
+        if (feedbackLabel != null) {
+            feedbackLabel.setText(message);
+            feedbackLabel.setVisible(true);
+            feedbackTimer = 1.4;
+        }
+    }
+
     @Override
     public void cleanup() {
         AudioManager.stopMusic();
         removeUINode(hudRoot);
         removeUINode(deathOverlay);
+        removeUINode(runOverlay);
 
         removeEntity(player);
         removeEntity(ground);
@@ -620,6 +718,7 @@ public class GameScreen extends Screen {
         chest = null;
         hudRoot = null;
         deathOverlay = null;
+        runOverlay = null;
     }
 
     private void clearLevelEntities() {
@@ -630,6 +729,7 @@ public class GameScreen extends Screen {
         removeEntity(returnPortal);
         removeEntity(princess);
         removeEntity(fleshWall);
+        removeUINode(runOverlay);
 
         for (Entity e : new ArrayList<>(platforms)) {
             removeEntity(e);
@@ -653,6 +753,7 @@ public class GameScreen extends Screen {
         pickups.clear();
 
         fleshWall = null;
+        runOverlay = null;
         princess = null;
         returnPortal = null;
         ground = null;
@@ -663,6 +764,14 @@ public class GameScreen extends Screen {
 
     public PlayerComponent getPlayerComponent() {
         return playerComponent;
+    }
+
+    public int getScore() {
+        return score;
+    }
+
+    public double getElapsedTime() {
+        return elapsedTime;
     }
 
     private HBox createPlayerHealthHud() {
@@ -798,6 +907,9 @@ public class GameScreen extends Screen {
 
     private void addScore(int amount) {
         score += amount;
+        if (score < 0) {
+            score = 0;
+        }
         if (scoreLabel != null) {
             scoreLabel.setText("Score: " + score);
         }
@@ -894,9 +1006,74 @@ public class GameScreen extends Screen {
         }
 
         escapeSequenceStarted = true;
+        removeEnemiesAndProjectiles();
+        spawnEscapeRoute(currentLevel);
         AudioManager.loopMusic(MUSIC_ESCAPE);
-        spawnFleshWall();
+        showRunOverlay();
         updateObjectiveLabel();
+    }
+
+    private void removeEnemiesAndProjectiles() {
+        for (Entity enemy : new ArrayList<>(enemies)) {
+            removeEntity(enemy);
+        }
+        for (Entity projectile : new ArrayList<>(getGameWorld().getEntitiesByType(EntityType.ENEMY_PROJECTILE))) {
+            removeEntity(projectile);
+        }
+        for (Entity arrow : new ArrayList<>(getGameWorld().getEntitiesByType(EntityType.PLAYER_ARROW))) {
+            removeEntity(arrow);
+        }
+        for (DamageTextEntry entry : new ArrayList<>(damageTexts)) {
+            removeEntity(entry.entity);
+        }
+
+        enemies.clear();
+        damageTexts.clear();
+    }
+
+    private void showRunOverlay() {
+        removeUINode(runOverlay);
+
+        runOverlay = new StackPane();
+        runOverlay.setPrefWidth(GameConfig.WINDOW_WIDTH);
+        runOverlay.setPrefHeight(GameConfig.WINDOW_HEIGHT);
+        runOverlay.setMouseTransparent(true);
+
+        Label runLabel = new Label("RUN!");
+        runLabel.setFont(AssetManager.getTitleFont());
+        runLabel.setTextFill(Color.web("#CC0000"));
+        runLabel.setEffect(TITLE_SHADOW);
+
+        runOverlay.getChildren().add(runLabel);
+        StackPane.setAlignment(runLabel, Pos.CENTER);
+
+        if (playerComponent != null) {
+            playerComponent.resetInputState();
+            playerComponent.setInputEnabled(false);
+        }
+
+        runOverlayTimer = 1.4;
+        getGameScene().addUINode(runOverlay);
+    }
+
+    private void updateRunOverlay(double dt) {
+        if (runOverlay == null) {
+            return;
+        }
+
+        runOverlayTimer -= dt;
+        if (runOverlayTimer <= 0) {
+            removeUINode(runOverlay);
+            runOverlay = null;
+            runOverlayTimer = 0;
+
+            if (playerComponent != null && !playerComponent.isDead()) {
+                playerComponent.setInputEnabled(true);
+            }
+            if (escapeSequenceStarted && fleshWall == null) {
+                spawnFleshWall();
+            }
+        }
     }
 
     private void spawnFleshWall() {
