@@ -101,7 +101,7 @@ public class MenuScreen extends Screen {
         buttonContainer.setPadding(new Insets(0));
         buttonContainer.setFillWidth(true);
 
-        ProfessionalButton startBtn = new ProfessionalButton("▶ START GAME");
+        ProfessionalButton startBtn = new ProfessionalButton("START GAME");
         startBtn.getButton().setFont(AssetManager.getTextFont());
         startBtn.setOnAction(e -> {
             if (onStartCallback != null) {
@@ -109,7 +109,7 @@ public class MenuScreen extends Screen {
             }
         });
 
-        ProfessionalButton settingsBtn = new ProfessionalButton("⚙ SETTINGS");
+        ProfessionalButton settingsBtn = new ProfessionalButton("SETTINGS");
         settingsBtn.getButton().setFont(AssetManager.getTextFont());
         settingsBtn.setOnAction(e -> {
             if (onSettingsCallback != null) {
@@ -118,7 +118,7 @@ public class MenuScreen extends Screen {
             }
         });
 
-        ProfessionalButton exitBtn = new ProfessionalButton("✕ EXIT");
+        ProfessionalButton exitBtn = new ProfessionalButton("EXIT");
         exitBtn.getButton().setFont(AssetManager.getTextFont());
         exitBtn.setOnAction(e -> {
             if (onExitCallback != null) {
@@ -131,10 +131,6 @@ public class MenuScreen extends Screen {
         mainContainer.getChildren().addAll(titleLabel, buttonContainer);
 
         return mainContainer;
-    }
-
-    @Override
-    public void update() {
     }
 
     @Override

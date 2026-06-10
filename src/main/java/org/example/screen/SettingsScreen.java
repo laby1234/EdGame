@@ -111,7 +111,7 @@ public class SettingsScreen extends Screen {
         buttonContainer.setAlignment(Pos.CENTER);
         buttonContainer.setPadding(new Insets(30, 0, 0, 0));
 
-        ProfessionalButton backBtn = new ProfessionalButton("◄ BACK");
+        ProfessionalButton backBtn = new ProfessionalButton("BACK");
         backBtn.setMinSize(250, 50);
         backBtn.setOnAction(e -> {
             if (onBackCallback != null) {
@@ -138,7 +138,7 @@ public class SettingsScreen extends Screen {
         section.setStyle(UIStyle.PANEL_BORDER);
         section.setMaxWidth(500);
 
-        Label sectionTitle = new Label("🔊 AUDIO SETTINGS");
+        Label sectionTitle = new Label("AUDIO SETTINGS");
         sectionTitle.setFont(AssetManager.getTextFont());
         sectionTitle.setTextFill(UIStyle.TEXT_COLOR);
         sectionTitle.setEffect(TEXT_SHADOW);
@@ -167,7 +167,7 @@ public class SettingsScreen extends Screen {
         section.setStyle(UIStyle.PANEL_BORDER);
         section.setMaxWidth(500);
 
-        Label sectionTitle = new Label("🎮 GRAPHICS SETTINGS");
+        Label sectionTitle = new Label("GRAPHICS SETTINGS");
         sectionTitle.setFont(AssetManager.getTextFont());
         sectionTitle.setTextFill(UIStyle.TEXT_COLOR);
         sectionTitle.setEffect(TEXT_SHADOW);
@@ -211,10 +211,6 @@ public class SettingsScreen extends Screen {
 
         box.getChildren().addAll(labelControl, slider, valueLabel);
         return box;
-    }
-
-    @Override
-    public void update() {
     }
 
     @Override

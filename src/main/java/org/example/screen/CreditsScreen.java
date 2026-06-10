@@ -138,10 +138,6 @@ public class CreditsScreen extends Screen {
     }
 
     @Override
-    public void update() {
-    }
-
-    @Override
     public void cleanup() {
         if (rootPane != null) {
             getGameScene().removeUINode(rootPane);

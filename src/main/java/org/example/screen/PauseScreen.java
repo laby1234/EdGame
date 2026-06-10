@@ -5,8 +5,6 @@ import javafx.geometry.Pos;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
@@ -46,16 +44,6 @@ public class PauseScreen extends Screen {
         rootPane.setPrefHeight(GameConfig.WINDOW_HEIGHT);
 
         rootPane.setStyle("-fx-background-color: rgba(0, 0, 0, 0.7);");
-
-//        Image bgImage = AssetManager.loadImage(AssetManager.PAUSE_BG);
-//        if (bgImage != null) {
-//            ImageView bgView = new ImageView(bgImage);
-//            bgView.setFitWidth(GameConfig.WINDOW_WIDTH);
-//            bgView.setFitHeight(GameConfig.WINDOW_HEIGHT);
-//            bgView.setPreserveRatio(true);
-//            bgView.setOpacity(0.3);
-//            rootPane.getChildren().add(bgView);
-//        }
 
         rootPane.setOnKeyPressed(this::handleKeyPressed);
         rootPane.setFocusTraversable(true);
@@ -149,7 +137,7 @@ public class PauseScreen extends Screen {
         buttonContainer.setAlignment(Pos.CENTER);
         buttonContainer.setPadding(new Insets(30, 0, 0, 0));
 
-        ProfessionalButton backBtn = new ProfessionalButton("◄ BACK");
+        ProfessionalButton backBtn = new ProfessionalButton("BACK");
         backBtn.setMinSize(250, 50);
         backBtn.setOnAction(e -> {
             showingOptions = false;
@@ -179,7 +167,7 @@ public class PauseScreen extends Screen {
         section.setStyle(UIStyle.PANEL_BORDER);
         section.setMaxWidth(500);
 
-        Label sectionTitle = new Label("🔊 AUDIO SETTINGS");
+        Label sectionTitle = new Label("AUDIO SETTINGS");
         styleSectionLabel(sectionTitle);
 
         HBox soundVolumeBox = createVolumeControl(
@@ -207,7 +195,7 @@ public class PauseScreen extends Screen {
         section.setStyle(UIStyle.PANEL_BORDER);
         section.setMaxWidth(500);
 
-        Label sectionTitle = new Label("🎮 GRAPHICS SETTINGS");
+        Label sectionTitle = new Label("GRAPHICS SETTINGS");
         styleSectionLabel(sectionTitle);
 
         Label resolutionLabel = new Label("Resolution: " + GameConfig.WINDOW_WIDTH + "x" + GameConfig.WINDOW_HEIGHT);
@@ -248,10 +236,6 @@ public class PauseScreen extends Screen {
         box.getChildren().addAll(labelControl, slider, valueLabel);
 
         return box;
-    }
-
-    @Override
-    public void update() {
     }
 
     @Override

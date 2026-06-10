@@ -16,12 +16,18 @@ import java.util.ArrayList;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
-import static com.almasb.fxgl.dsl.FXGL.play;
 import static com.almasb.fxgl.dsl.FXGL.getGameWorld;
 import static com.almasb.fxgl.dsl.FXGL.getInput;
 import static com.almasb.fxgl.dsl.FXGL.texture;
 
 public class PlayerComponent extends Component {
+
+    private static final String ANIMATION_IDLE = "idle";
+    private static final String ANIMATION_RUN = "run";
+    private static final String ANIMATION_JUMP = "jump";
+    private static final double ANIMATION_FRAME_DURATION = 0.15;
+    private static final int RUN_FRAME_COUNT = 4;
+    private static final int IDLE_FRAME_COUNT = 2;
 
     private enum Weapon {
         SWORD, BOW
@@ -37,10 +43,9 @@ public class PlayerComponent extends Component {
     private Consumer<String> onWeaponChanged;
 
     private double animationTimer = 0;
-    private final double animationFrameDuration = 0.15;
     private int currentRunFrame = 0;
     private int currentIdleFrame = 0;
-    private String lastAnimationState = "idle";
+    private String lastAnimationState = ANIMATION_IDLE;
 
     private boolean movingLeft = false;
     private boolean movingRight = false;
@@ -143,7 +148,7 @@ public class PlayerComponent extends Component {
     }
 
     public void startWeaponAction() {
-        if (dead || carryingChest|| !inputEnabled) {
+        if (dead || carryingChest || !inputEnabled) {
             return;
         }
 
@@ -450,11 +455,11 @@ public class PlayerComponent extends Component {
         String currentState;
 
         if (!onGround) {
-            currentState = "jump";
+            currentState = ANIMATION_JUMP;
         } else if (movingLeft || movingRight) {
-            currentState = "run";
+            currentState = ANIMATION_RUN;
         } else {
-            currentState = "idle";
+            currentState = ANIMATION_IDLE;
         }
 
         if (!currentState.equals(lastAnimationState)) {
@@ -463,7 +468,7 @@ public class PlayerComponent extends Component {
             currentIdleFrame = 0;
             lastAnimationState = currentState;
 
-            if (currentState.equals("jump")) {
+            if (currentState.equals(ANIMATION_JUMP)) {
                 updatePlayerTexture("sprites/jump.png");
                 return;
             }
@@ -471,16 +476,16 @@ public class PlayerComponent extends Component {
 
         animationTimer += tpf;
 
-        if (currentState.equals("run")) {
-            if (animationTimer >= animationFrameDuration) {
-                animationTimer -= animationFrameDuration;
-                currentRunFrame = (currentRunFrame + 1) % 4;
+        if (currentState.equals(ANIMATION_RUN)) {
+            if (animationTimer >= ANIMATION_FRAME_DURATION) {
+                animationTimer -= ANIMATION_FRAME_DURATION;
+                currentRunFrame = (currentRunFrame + 1) % RUN_FRAME_COUNT;
                 updatePlayerTexture("sprites/player_run" + (currentRunFrame + 1) + ".png");
             }
-        } else if (currentState.equals("idle")) {
-            if (animationTimer >= animationFrameDuration) {
-                animationTimer -= animationFrameDuration;
-                currentIdleFrame = (currentIdleFrame + 1) % 2;
+        } else if (currentState.equals(ANIMATION_IDLE)) {
+            if (animationTimer >= ANIMATION_FRAME_DURATION) {
+                animationTimer -= ANIMATION_FRAME_DURATION;
+                currentIdleFrame = (currentIdleFrame + 1) % IDLE_FRAME_COUNT;
                 updatePlayerTexture("sprites/player_idle" + (currentIdleFrame + 1) + ".png");
             }
         }

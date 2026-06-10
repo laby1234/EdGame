@@ -19,16 +19,15 @@ import org.example.config.GameConfig;
 import org.example.entity.EntityFactory;
 import org.example.entity.EntityType;
 import org.example.entity.player.PlayerComponent;
+import org.example.audio.AudioManager;
 import org.example.ui.AssetManager;
 import org.example.ui.ProfessionalButton;
 import org.example.ui.UIStyle;
-import org.example.audio.AudioManager;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static com.almasb.fxgl.dsl.FXGL.getAudioPlayer;
-import static com.almasb.fxgl.dsl.FXGL.loopBGM;
 import static com.almasb.fxgl.dsl.FXGL.entityBuilder;
 import static com.almasb.fxgl.dsl.FXGL.getGameScene;
 import static com.almasb.fxgl.dsl.FXGL.getGameWorld;
@@ -63,7 +62,6 @@ public class GameScreen extends Screen {
     private Entity chest;
     private Entity fleshWall;
 
-    private String currentMusicPath;
     private StackPane hudRoot;
     private StackPane deathOverlay;
     private Rectangle playerHealthFill;
@@ -330,7 +328,7 @@ public class GameScreen extends Screen {
             platforms.add(EntityFactory.createPlatform(3140, 500, 3));
             platforms.add(EntityFactory.createPlatform(2720, 500, 3));
             platforms.add(EntityFactory.createPlatform(2160, 500, 3));
-            platforms.add(EntityFactory.createPlatform(1600, 500, 3));
+            platforms.add(EntityFactory.createPlatform(1580, 500, 3));
             platforms.add(EntityFactory.createPlatform(1240, 500, 3));
             platforms.add(EntityFactory.createPlatform(740, 500, 3));
             platforms.add(EntityFactory.createPlatform(210, 500, 3));
@@ -340,7 +338,7 @@ public class GameScreen extends Screen {
             platforms.add(EntityFactory.createStonePlatform(2460, 500, 3));
             platforms.add(EntityFactory.createStonePlatform(2060, 490, 3));
             platforms.add(EntityFactory.createStonePlatform(1420, 500, 3));
-            platforms.add(EntityFactory.createStonePlatform(900, 500, 3));
+            platforms.add(EntityFactory.createStonePlatform(980, 500, 3));
         }
     }
 
@@ -569,7 +567,7 @@ public class GameScreen extends Screen {
 
             if (currentLevel == LevelType.FOREST && carryingChest && player.getX() <= 120) {
                 carryingChest = false;
-                getAudioPlayer().stopAllMusic();
+                AudioManager.stopMusic();
                 escapeSequenceStarted = false;
                 removeEntity(fleshWall);
                 fleshWall = null;
@@ -707,7 +705,6 @@ public class GameScreen extends Screen {
         pickups.clear();
         damageTexts.clear();
 
-        currentMusicPath = null;
         fleshWall = null;
         princess = null;
         player = null;
@@ -900,7 +897,7 @@ public class GameScreen extends Screen {
             weaponIcon.setImage(weaponBowImage != null ? weaponBowImage : weaponIcon.getImage());
         } else if (CHEST.equalsIgnoreCase(weaponName)) {
             weaponIcon.setImage(chestImage != null ? chestImage : weaponIcon.getImage());
-        }else {
+        } else {
             weaponIcon.setImage(weaponSwordImage != null ? weaponSwordImage : weaponIcon.getImage());
         }
     }
@@ -1099,7 +1096,7 @@ public class GameScreen extends Screen {
     }
 
     private void playLevelMusic() {
-        if(!escapeSequenceStarted) {
+        if (!escapeSequenceStarted) {
             String nextMusic = currentLevel == LevelType.FOREST
                     ? AssetManager.MUSIC_FOREST
                     : AssetManager.MUSIC_CAVE;
