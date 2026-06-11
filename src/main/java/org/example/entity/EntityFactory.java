@@ -248,11 +248,11 @@ public class EntityFactory {
                 .buildAndAttach();
     }
 
-    public static Entity createArrow(double x, double y, double directionX, double directionY, int damage, double speed) {
+    public static void createArrow(double x, double y, double directionX, double directionY, int damage, double speed) {
         Texture arrowView = texture("blocks/arrow.png", 34, 8);
         arrowView.setRotate(Math.toDegrees(Math.atan2(directionY, directionX)));
 
-        return entityBuilder()
+        entityBuilder()
                 .type(EntityType.PLAYER_ARROW)
                 .at(x, y)
                 .view(arrowView)
@@ -261,12 +261,12 @@ public class EntityFactory {
                 .buildAndAttach();
     }
 
-    public static Entity createEnemyProjectile(double x, double y, double directionX, double directionY, int damage, double speed) {
+    public static void createEnemyProjectile(double x, double y, double directionX, double directionY, int damage, double speed) {
         Rectangle projectile = new Rectangle(16, 16, Color.web("#7A5CFF"));
         projectile.setArcWidth(16);
         projectile.setArcHeight(16);
 
-        return entityBuilder()
+        entityBuilder()
                 .type(EntityType.ENEMY_PROJECTILE)
                 .at(x, y)
                 .view(projectile)

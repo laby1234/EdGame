@@ -27,14 +27,14 @@ public class EnemyComponent extends Component {
     private final Runnable onDeathDrop;
     private final boolean caveEnemy;
 
-    private int maxHealth;
+    private final int maxHealth;
     private int health;
-    private double speed;
-    private double aggroRange;
-    private double attackRange;
-    private double attackCooldown;
-    private double projectileCooldown;
-    private int scoreValue;
+    private final double speed;
+    private final double aggroRange;
+    private final double attackRange;
+    private final double attackCooldown;
+    private final double projectileCooldown;
+    private final int scoreValue;
 
     private double direction = -1;
     private double attackTimer = 0;
